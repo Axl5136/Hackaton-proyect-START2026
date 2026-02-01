@@ -5,12 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "../../supabase";
+import { useNavigate } from "react-router-dom";
 
-export function LoginModal({ onClose }) {
+export function LoginModal({ onClose, onSwitchToRegister }) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -19,7 +23,7 @@ export function LoginModal({ onClose }) {
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -28,6 +32,7 @@ export function LoginModal({ onClose }) {
       // Login exitoso
       console.log("Usuario logueado:", data.user);
       onClose();
+      navigate("/dashboard");
       // Opcional: Recargar página para actualizar Header si no usas Context
       // window.location.reload(); 
 
@@ -95,6 +100,15 @@ export function LoginModal({ onClose }) {
             <button type="button" className="text-sm text-primary hover:underline">
               Olvidé mi contraseña
             </button>
+            {onSwitchToRegister && (
+              <button
+                type="button"
+                onClick={onSwitchToRegister}
+                className="text-sm text-primary hover:underline font-semibold"
+              >
+                Registrarme
+              </button>
+            )}
           </div>
 
           <Button type="submit" className="w-full glow-water" disabled={loading}>

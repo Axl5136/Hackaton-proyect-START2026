@@ -1,9 +1,7 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Droplets, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Activity } from "lucide-react";
+import { Droplets, Activity, DollarSign, AlignVerticalJustifyCenter, BalloonIcon } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -24,44 +22,36 @@ const formatCurrency = (value) => {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(value);
 };
 
-// --- GENERADOR DE HISTORIAL "FAKE" (EL SECRETO) ---
+// --- GENERADOR DE HISTORIAL DINÁMICO (VERSIÓN DRAMÁTICA) ---
 function generateChartData(company, metric) {
   const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-
-  // Extraemos valores base reales
-  const waterTotal = parseValue(company.waterSaved);
   const moneyTotal = parseValue(company.marketCap);
-
-  // Determinamos factor de volatilidad basado en el riesgo
   const riskLabel = company.risk || "Bajo";
-  const volatility = riskLabel === "Alto" || riskLabel === "Crítico" ? 0.4 : 0.1; // 40% vs 10% de ruido
+  
+  // Volatilidad para la línea de peligro
+  const volatility = riskLabel === "Alto" ? 0.8 : 0.5;
 
   return months.map((month, i) => {
-    const progress = (i + 1) / 12; // 0.1 a 1.0
+    const progress = (i + 1) / 12;
+    
+    // ESCENARIO DE RIESGO (Roja): Caída constante + picos de inestabilidad
+    // Simula que sin Aquax, el valor del lote se degrada por falta de agua
+    const downwardTrend = 1 - (progress * 0.4); // Pierde hasta el 40% de valor
+    const aggressiveNoise = (Math.sin(i * 2.5) * 0.15) * volatility;
+    const actual = Math.round(moneyTotal * (downwardTrend + aggressiveNoise));
 
-    let value = 0;
+    // ESCENARIO DE ÉXITO (Azul): Curva de crecimiento logarítmico
+    // Simula plusvalía por regeneración hídrica y créditos de agua
+    const successTrend = 0.8 + (Math.log10(i + 1) * 0.8); 
+    const stableGrowth = 1 + (progress * 0.5); // Gana un 50% de valor sobre el inicial
+    const proyectado = Math.round(moneyTotal * stableGrowth * (1 + Math.random() * 0.05)); 
 
-    if (metric === "financial") {
-      // Curva de crecimiento de inversión (Logarítmica suave + Ruido)
-      // Empieza al 30% del valor y sube hasta el 100%
-      const baseCurve = moneyTotal * (0.3 + (progress * 0.7));
-      const noise = baseCurve * (Math.random() - 0.5) * volatility * 0.5;
-      value = Math.round(baseCurve + noise);
-
-    } else if (metric === "water") {
-      // Acumulación de agua (Lineal con estacionalidad)
-      const seasonalFactor = 1 + (Math.sin(i) * 0.1); // Lluvias simuladas
-      value = Math.round((waterTotal * progress) * seasonalFactor);
-
-    } else if (metric === "risk") {
-      // Índice de Estrés Hídrico (0-100%)
-      const baseRisk = riskLabel === "Alto" ? 75 : riskLabel === "Medio" ? 50 : 25;
-      // Mucho ruido si es alto riesgo (picos de sequía)
-      const riskNoise = (Math.random() - 0.5) * (volatility * 100);
-      value = Math.max(0, Math.min(100, Math.round(baseRisk + riskNoise)));
-    }
-
-    return { name: month, value };
+    return { 
+      name: month, 
+      actual: Math.max(actual, moneyTotal * 0.2), // No baja de un suelo mínimo
+      proyectado,
+      value: metric === "financial" ? proyectado : (metric === "water" ? proyectado : actual)
+    };
   });
 }
 
@@ -93,41 +83,26 @@ function KpiCard({ icon: Icon, title, value, subtext, color, isActive, onClick }
   );
 }
 
-// --- COMPONENTE PRINCIPAL ---
 export function ImpactChart({ company }) {
-  const [timeRange, setTimeRange] = useState("1A");
-  const [activeMetric, setActiveMetric] = useState("financial"); // Default: Show me the money
+  const [activeMetric, setActiveMetric] = useState("financial");
 
   if (!company) return null;
 
-  // Generamos datos al vuelo
   const chartData = useMemo(() => generateChartData(company, activeMetric), [company, activeMetric]);
-
-  // Configuración de colores según métrica
-  const config = {
-    financial: { color: "#10b981", name: "Valor de Mercado", gradient: "emerald" }, // Verde Dinero
-    water: { color: "#3b82f6", name: "Agua Ahorrada", gradient: "blue" },       // Azul Agua
-    risk: { color: "#f43f5e", name: "Riesgo Hídrico", gradient: "rose" }        // Rojo Peligro
-  };
-
-  const currentConfig = config[activeMetric];
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      let val = payload[0].value;
-      let formatted = val;
-
-      if (activeMetric === "financial") formatted = formatCurrency(val);
-      if (activeMetric === "water") formatted = `${val.toLocaleString()} m³`;
-      if (activeMetric === "risk") formatted = `${val}%`;
-
       return (
         <div className="bg-background/95 backdrop-blur border border-border rounded-lg px-3 py-2 shadow-xl">
-          <p className="text-xs text-muted-foreground mb-1">{label}</p>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full`} style={{ backgroundColor: currentConfig.color }} />
-            <p className="text-sm font-bold text-foreground">{formatted}</p>
-          </div>
+          <p className="text-xs text-muted-foreground mb-1 font-bold">{label}</p>
+          {payload.map((p, i) => (
+            <div key={i} className="flex items-center gap-2 py-0.5">
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+              <p className="text-sm font-bold text-foreground">
+                {p.name}: {activeMetric === "financial" ? formatCurrency(p.value) : p.value.toLocaleString()}
+              </p>
+            </div>
+          ))}
         </div>
       );
     }
@@ -137,109 +112,91 @@ export function ImpactChart({ company }) {
   return (
     <Card className="bg-card/50 border-border/50 shadow-sm">
       <CardHeader className="pb-2 pt-4 px-4 sm:px-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex justify-between items-center">
           <div>
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-lg font-bold">{company.name}</CardTitle>
-              {company.risk === "Alto" && (
-                <span className="bg-red-500/10 text-red-500 text-[10px] px-2 py-0.5 rounded-full border border-red-500/20 font-mono">
-                  VOLÁTIL
-                </span>
-              )}
-            </div>
+            <CardTitle className="text-lg font-bold tracking-tight">{company.name}</CardTitle>
             <CardDescription className="text-xs mt-1">
-              Análisis de rendimiento y riesgo en tiempo real.
+              {activeMetric === "financial" ? "Proyección de Valor: Impacto vs. Desgaste" : "Análisis de métricas críticas"}
             </CardDescription>
           </div>
-
-          <div className="flex items-center gap-2 bg-secondary/30 p-1 rounded-lg self-start sm:self-auto">
-            {["1M", "3M", "6M", "1A"].map((range) => (
-              <Button
-                key={range}
-                variant={timeRange === range ? "default" : "ghost"}
-                size="sm"
-                className={`h-7 px-3 text-xs ${timeRange === range ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
-                onClick={() => setTimeRange(range)}
-              >
-                {range}
-              </Button>
-            ))}
-          </div>
+          <Activity className="h-4 w-4 text-muted-foreground animate-pulse" />
         </div>
       </CardHeader>
 
       <CardContent className="px-4 sm:px-6 pb-6 space-y-6">
-        {/* GRÁFICA PRINCIPAL */}
-        <div className="h-[300px] w-full mt-2">
+        <div className="h-[320px] w-full mt-2">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
-                <linearGradient id={`gradient-${activeMetric}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={currentConfig.color} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={currentConfig.color} stopOpacity={0} />
+                <linearGradient id="colorProyectado" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
-              <XAxis
-                dataKey="name"
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={10}
-                tickLine={false}
-                axisLine={false}
-                dy={10}
-              />
-              <YAxis
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={10}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value) => {
-                  if (activeMetric === 'financial') return `$${value / 1000}k`;
-                  if (activeMetric === 'water') return `${value / 1000}k`;
-                  return `${value}%`;
-                }}
-              />
-              <RechartsTooltip content={<CustomTooltip />} cursor={{ stroke: currentConfig.color, strokeWidth: 1, strokeDasharray: '4 4' }} />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke={currentConfig.color}
-                strokeWidth={3}
-                fill={`url(#gradient-${activeMetric})`}
-                animationDuration={1500}
-              />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.1} vertical={false} />
+              <XAxis dataKey="name" stroke="#666" fontSize={10} tickLine={false} axisLine={false} dy={10} />
+              <YAxis hide domain={['dataMin - 1000', 'dataMax + 1000']} />
+              
+              <RechartsTooltip content={<CustomTooltip />} />
+              
+              {/* LÍNEA DE RIESGO (ROJA): Sólida, agresiva y con ruido marcado */}
+              {(activeMetric === "financial" || activeMetric === "risk") && (
+                <Area
+                  name="Escenario de Riesgo"
+                  type="monotone"
+                  dataKey="actual"
+                  stroke="#f43f5e"
+                  strokeWidth={3}
+                  fill="url(#colorActual)"
+                  animationDuration={1000}
+                />
+              )}
+
+              {/* LÍNEA AQUAX (AZUL): Sólida, estable y superior */}
+              {(activeMetric === "financial" || activeMetric === "water") && (
+                <Area
+                  name="Impacto Aquax"
+                  type="monotone"
+                  dataKey="proyectado"
+                  stroke="#3b82f6"
+                  strokeWidth={4}
+                  fill="url(#colorProyectado)"
+                  animationDuration={1500}
+                />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
-        {/* SELECTORES DE MÉTRICAS (KPIs) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <KpiCard
-            icon={DollarSign}
+            icon={BalloonIcon}
             title="Valor de Mercado"
             value={company.marketCap}
-            subtext="Capitalización del lote"
-            color="emerald" // Tailwind: text-emerald-500
+            subtext="Vista Comparativa"
+            color="emerald"
             isActive={activeMetric === "financial"}
             onClick={() => setActiveMetric("financial")}
           />
-
           <KpiCard
             icon={Droplets}
             title="Agua Verificada"
             value={company.waterSaved}
-            subtext="Activo subyacente (m³)"
-            color="blue" // Tailwind: text-blue-500
+            subtext="Recuperación Hídrica"
+            color="blue"
             isActive={activeMetric === "water"}
             onClick={() => setActiveMetric("water")}
           />
-
           <KpiCard
             icon={Activity}
             title="Nivel de Riesgo"
             value={company.risk}
-            subtext="Volatilidad hídrica"
-            color="rose" // Tailwind: text-rose-500
+            subtext="Estrés del Acuífero"
+            color="rose"
             isActive={activeMetric === "risk"}
             onClick={() => setActiveMetric("risk")}
           />

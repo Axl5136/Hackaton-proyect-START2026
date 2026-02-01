@@ -4,7 +4,9 @@ import { ImpactChart } from "@/components/water/ImpactChart";
 import { CompanyTable } from "@/components/water/CompanyTable";
 import { LoginModal } from "@/components/water/LoginModal";
 import { RegisterModal } from "@/components/water/RegisterModal";
+import { supabase } from "@/lib/supabaseClient";
 
+// Mock data as fallback when Supabase fails or returns empty
 const mockCompanies = [
   {
     id: 1,
@@ -110,15 +112,92 @@ const Index = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(null);
+  const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Sort companies by water saved (descending) and select first by default
+  // Helper function to calculate risk level
+  const calculateLegacyRisk = (score) => {
+    if (!score) return "Bajo";
+    if (score >= 80) return "Alto";
+    if (score >= 50) return "Medio";
+    return "Bajo";
+  };
+
+  // Fetch projects from Supabase
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase.from('projects').select('*');
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          const formattedData = data.map(project => {
+            const waterVolume = Number(project.water_savings_m3) || 0;
+            const pricePerCredit = Number(project.price_per_credit) || 0;
+            const totalValue = waterVolume * pricePerCredit;
+
+            // 🛰️ INTEGRACIÓN DE TENDENCIAS SATELITALES (El "Factor Wow")
+            const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+            const rawNdwi = project.historical_ndwi || [0, 0, 0, 0, 0, 0];
+
+            const chartTrends = rawNdwi.map((val, i) => ({
+              month: months[i] || `M${i + 1}`,
+              actual: val,
+              proyectado: val * 1.15 // Simulación de mejora hídrica
+            }));
+
+            return {
+              id: project.id,
+              name: project.name || "Proyecto Sin Nombre",
+              industry: project.crop || "Agricultura",
+              waterSaved: `${waterVolume.toLocaleString()} m³`,
+              creditsSupported: `${waterVolume.toLocaleString()} m³`,
+              marketCap: `$${totalValue.toLocaleString('es-MX')} MXN`,
+              historical_ndwi: chartTrends,
+              risk: calculateLegacyRisk(project.risk_score),
+              verification: project.verified_by_ai ? "Muy alta" : "Media",
+              projects: 1,
+              co2Avoided: `${Math.floor(waterVolume * 0.14)} ton`,
+              lastUpdate: "Hace 1 día",
+              avgCost: `$${pricePerCredit} MXN/m³`,
+              region: project.region
+            };
+          });
+
+          setCompanies(formattedData);
+        } else {
+          // Use mock data as fallback
+          setCompanies(mockCompanies);
+        }
+      } catch (error) {
+        console.error('Error supabase:', error.message);
+        // Use mock data on error
+        setCompanies(mockCompanies);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, []);
+
+  // Sort companies by marketCap or waterSaved (descending)
   const sortedCompanies = useMemo(() => {
-    return [...mockCompanies].sort((a, b) => {
+    return [...companies].sort((a, b) => {
+      // Try marketCap first (from Supabase data)
+      if (a.marketCap && b.marketCap) {
+        const valA = parseFloat(a.marketCap?.replace(/[^0-9.-]+/g, "")) || 0;
+        const valB = parseFloat(b.marketCap?.replace(/[^0-9.-]+/g, "")) || 0;
+        return valB - valA;
+      }
+      // Fallback to waterSaved (for mock data)
       const aVal = parseInt(a.waterSaved.replace(/[^0-9]/g, ""));
       const bVal = parseInt(b.waterSaved.replace(/[^0-9]/g, ""));
       return bVal - aVal;
     });
-  }, []);
+  }, [companies]);
 
   // Select first company on mount
   useEffect(() => {
@@ -136,27 +215,45 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header 
+    <div className="min-h-screen bg-background text-foreground font-sans">
+      <Header
         onLoginClick={() => setShowLogin(true)}
         onRegisterClick={() => setShowRegister(true)}
       />
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* Top Section: Chart + KPIs */}
-        <ImpactChart company={selectedCompany} />
+        {loading ? (
+          <div className="flex items-center justify-center h-64 text-muted-foreground animate-pulse">
+            Cargando mercado de agua...
+          </div>
+        ) : (
+          <>
+            {/* IMPACT CHART: Con datos satelitales integrados */}
+            {selectedCompany && <ImpactChart company={selectedCompany} />}
 
-        {/* Bottom Section: Company Ranking Table */}
-        <CompanyTable 
-          companies={sortedCompanies}
-          selectedCompany={selectedCompany}
-          onSelectCompany={setSelectedCompany}
-        />
+            {/* COMPANY TABLE */}
+            <CompanyTable
+              companies={sortedCompanies}
+              selectedCompany={selectedCompany}
+              onSelectCompany={setSelectedCompany}
+            />
+          </>
+        )}
       </main>
 
-      {/* Modals */}
-      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
-      {showRegister && <RegisterModal onClose={() => setShowRegister(false)} />}
+      {/* MODALES CON NAVEGACIÓN PRO */}
+      {showLogin && (
+        <LoginModal
+          onClose={() => setShowLogin(false)}
+          onSwitchToRegister={() => { setShowLogin(false); setShowRegister(true); }}
+        />
+      )}
+      {showRegister && (
+        <RegisterModal
+          onClose={() => setShowRegister(false)}
+          onSwitchToLogin={() => { setShowRegister(false); setShowLogin(true); }}
+        />
+      )}
     </div>
   );
 };

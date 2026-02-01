@@ -10,6 +10,8 @@ import Certificates from "./pages/Certificates";
 import CertificateSuccess from "./pages/CertificateSuccess";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import Dashboard from "./pages/Dashboard";
+import Marketplace from "./pages/Marketplace";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +30,9 @@ const App = () => (
           <Route path="/certificate-success" element={<CertificateSuccess />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/marketplace" element={<Marketplace />} />
+
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

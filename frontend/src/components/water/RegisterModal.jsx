@@ -1,23 +1,26 @@
 import { useState } from "react";
-import { X, Building2, Loader2 } from "lucide-react"; // Agregué Loader2
+import { X, Building2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// Asegúrate de importar tu cliente supabase correctamente
+// 1. IMPORTANTE: Importamos el hook de navegación
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../../supabase";
 
-export function RegisterModal({ onClose }) {
+export function RegisterModal({ onClose, onSwitchToLogin }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Estado para el formulario
+  // 2. Inicializamos el hook
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     companyName: "",
     industry: "",
     region: "",
     email: "",
-    password: "" // Campo nuevo necesario
+    password: ""
   });
 
   const handleChange = (field, value) => {
@@ -30,12 +33,11 @@ export function RegisterModal({ onClose }) {
     setLoading(true);
 
     try {
-      // 1. Crear usuario en Supabase Auth
-      const { data, error: authError } = await supabase.auth.signUp({
+      // Crear usuario en Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          // Guardamos los datos extra como metadata del usuario (Hackathon Friendly)
           data: {
             company_name: formData.companyName,
             industry: formData.industry,
@@ -47,9 +49,30 @@ export function RegisterModal({ onClose }) {
 
       if (authError) throw authError;
 
+      const userId = authData.user?.id;
+
+      if (userId) {
+        // Insertar perfil de empresa
+        const { error: dbError } = await supabase.from('companies').insert([
+          {
+            user_id: userId,
+            name: formData.companyName,
+            industry: formData.industry,
+            region: formData.region,
+            total_budget: 0,
+            water_risk_level: "BAJO"
+          }
+        ]);
+
+        if (dbError) throw new Error("Error en perfil de empresa: " + dbError.message);
+      }
+
       // Éxito
-      alert("¡Cuenta creada con éxito! Revisa tu correo o inicia sesión.");
+      // alert("¡Bienvenido! Redirigiendo al panel..."); // Opcional: quitar la alerta para que sea más fluido
       onClose();
+
+      // 3. LA MAGIA: Redirigir automáticamente al Dashboard
+      navigate("/dashboard");
 
     } catch (err) {
       console.error(err);
@@ -145,7 +168,6 @@ export function RegisterModal({ onClose }) {
             />
           </div>
 
-          {/* CAMPO DE PASSWORD AGREGADO */}
           <div className="space-y-2">
             <Label htmlFor="password">Crear contraseña</Label>
             <Input
@@ -168,9 +190,22 @@ export function RegisterModal({ onClose }) {
             )}
           </Button>
 
-          <p className="text-xs text-center text-muted-foreground">
+          <p className="text-xs text-center text-muted-foreground mt-4">
             Al registrarte, aceptas nuestros términos de servicio.
           </p>
+
+          {onSwitchToLogin && (
+            <div className="text-center mt-4 pt-4 border-t border-border/50">
+              <span className="text-sm text-muted-foreground">¿Ya tienes cuenta? </span>
+              <button
+                type="button"
+                className="text-sm text-primary hover:underline font-semibold"
+                onClick={onSwitchToLogin}
+              >
+                Inicia sesión
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>

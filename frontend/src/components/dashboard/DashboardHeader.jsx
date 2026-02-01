@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom"; // 1. Importar navegación
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,8 +11,25 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, Building2, User } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+// 2. Importar Supabase (Ajusta la ruta si es necesario, ../../ suele ser correcto desde components/dashboard)
+import { supabase } from "../../supabase";
 
 export function DashboardHeader({ companyName = "AguaCorp México" }) {
+  const navigate = useNavigate(); // Hook de navegación
+
+  // 3. Función para cerrar sesión
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      // Redirigir al Landing Page (Home)
+      navigate("/");
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error.message);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-6">
       <div className="flex items-center gap-4">
@@ -56,7 +74,12 @@ export function DashboardHeader({ companyName = "AguaCorp México" }) {
               Configuración
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-500 focus:text-red-500 focus:bg-red-500/10">
+
+            {/* CONECTAMOS EL ONCLICK AQUÍ */}
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-red-500 focus:text-red-500 focus:bg-red-500/10 cursor-pointer"
+            >
               <LogOut className="mr-2 h-4 w-4" />
               Cerrar sesión
             </DropdownMenuItem>
