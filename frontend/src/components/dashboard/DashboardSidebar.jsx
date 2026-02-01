@@ -67,10 +67,6 @@ export function DashboardSidebar() {
     <Sidebar
       collapsible="offcanvas"
       className="border-none"
-      style={{
-        "--sidebar-border": "transparent",
-        "--sidebar-background": "transparent", // O usa "hsl(var(--background))" si transparente da problemas
-      }}
     >
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
