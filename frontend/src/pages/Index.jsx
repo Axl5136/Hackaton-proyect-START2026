@@ -1,133 +1,108 @@
 import { useState, useEffect, useMemo } from "react";
+// Ajusta la ruta si tu supabase.js está en otra carpeta (ej: '../supabase')
+import { supabase } from "../supabase";
+
 import { Header } from "@/components/water/Header";
 import { ImpactChart } from "@/components/water/ImpactChart";
 import { CompanyTable } from "@/components/water/CompanyTable";
 import { LoginModal } from "@/components/water/LoginModal";
 import { RegisterModal } from "@/components/water/RegisterModal";
 
-const mockCompanies = [
-  {
-    id: 1,
-    name: "AgroVerde MX",
-    industry: "Agricultura",
-    waterSaved: "4,230 m³",
-    creditsSupported: "3,500 m³",
-    projects: 8,
-    risk: "Bajo",
-    verification: "Muy alta",
-    co2Avoided: "890 ton",
-    lastUpdate: "Hace 2 días",
-    avgCost: "$78 MXN/m³",
-    region: "Bajío",
-  },
-  {
-    id: 2,
-    name: "Cervecería Agua Clara",
-    industry: "Bebidas",
-    waterSaved: "2,890 m³",
-    creditsSupported: "2,200 m³",
-    projects: 5,
-    risk: "Medio",
-    verification: "Alta",
-    co2Avoided: "560 ton",
-    lastUpdate: "Hace 5 días",
-    avgCost: "$92 MXN/m³",
-    region: "Norte",
-  },
-  {
-    id: 3,
-    name: "TechnoAgua Systems",
-    industry: "Tecnología",
-    waterSaved: "1,450 m³",
-    creditsSupported: "1,100 m³",
-    projects: 3,
-    risk: "Bajo",
-    verification: "Media",
-    co2Avoided: "340 ton",
-    lastUpdate: "Hace 1 semana",
-    avgCost: "$85 MXN/m³",
-    region: "Centro",
-  },
-  {
-    id: 4,
-    name: "Industrias del Valle",
-    industry: "Manufactura",
-    waterSaved: "3,670 m³",
-    creditsSupported: "3,000 m³",
-    projects: 6,
-    risk: "Alto",
-    verification: "Muy alta",
-    co2Avoided: "720 ton",
-    lastUpdate: "Hace 3 días",
-    avgCost: "$68 MXN/m³",
-    region: "Sur",
-  },
-  {
-    id: 5,
-    name: "Alimentos Sustentables",
-    industry: "Agricultura",
-    waterSaved: "2,100 m³",
-    creditsSupported: "1,800 m³",
-    projects: 4,
-    risk: "Medio",
-    verification: "Alta",
-    co2Avoided: "480 ton",
-    lastUpdate: "Hace 4 días",
-    avgCost: "$82 MXN/m³",
-    region: "Bajío",
-  },
-  {
-    id: 6,
-    name: "Hidroponía del Norte",
-    industry: "Agricultura",
-    waterSaved: "1,890 m³",
-    creditsSupported: "1,500 m³",
-    projects: 4,
-    risk: "Bajo",
-    verification: "Alta",
-    co2Avoided: "420 ton",
-    lastUpdate: "Hace 1 día",
-    avgCost: "$75 MXN/m³",
-    region: "Norte",
-  },
-  {
-    id: 7,
-    name: "Textiles Ecológicos SA",
-    industry: "Manufactura",
-    waterSaved: "980 m³",
-    creditsSupported: "800 m³",
-    projects: 2,
-    risk: "Alto",
-    verification: "Media",
-    co2Avoided: "210 ton",
-    lastUpdate: "Hace 1 semana",
-    avgCost: "$95 MXN/m³",
-    region: "Centro",
-  },
-];
-
 const Index = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(null);
 
-  // Sort companies by water saved (descending) and select first by default
-  const sortedCompanies = useMemo(() => {
-    return [...mockCompanies].sort((a, b) => {
-      const aVal = parseInt(a.waterSaved.replace(/[^0-9]/g, ""));
-      const bVal = parseInt(b.waterSaved.replace(/[^0-9]/g, ""));
-      return bVal - aVal;
-    });
+  // Estado para los datos reales de Supabase
+  const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // 1. CARGA DE DATOS (Modo Fintech)
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setLoading(true);
+
+        // Traemos todos los proyectos
+        const { data, error } = await supabase
+          .from('projects')
+          .select('*');
+
+        if (error) throw error;
+
+        // TRANSFORMACIÓN DE DATOS
+        const formattedData = data.map(project => {
+          // Extraemos valores base para cálculos
+          const waterVolume = project.water_savings_m3 || 0;
+          const pricePerCredit = project.price_per_credit || 0;
+          const totalValue = waterVolume * pricePerCredit; // Valor total del lote
+
+          return {
+            id: project.id,
+            // Si el nombre viene vacío, ponemos un placeholder
+            name: project.name || "Proyecto Sin Nombre",
+            industry: project.crop || "Agricultura", // En el dashboard mostramos el Cultivo como industria
+
+            // COLUMNA 1: El Activo Físico (Lo que se ahorró)
+            waterSaved: `${waterVolume.toLocaleString()} m³`,
+
+            // COLUMNA 2: El Valor Financiero (La "carne" para el inversionista)
+            // En lugar de repetir los créditos, mostramos cuánto vale ese ahorro en dinero.
+            creditsSupported: `$${totalValue.toLocaleString('es-MX')} MXN`,
+
+            // Lógica de Riesgo (Score alto = Riesgo alto de sequía = Mayor urgencia)
+            risk: calculateRiskLabel(project.risk_score),
+
+            // Verificación
+            verification: project.verified_by_ai ? "Verificada (IA)" : "En Proceso",
+
+            // Datos adicionales para la tabla y gráficas
+            projects: 1, // Un lote = 1 Proyecto
+            co2Avoided: `${Math.floor(waterVolume * 0.2)} ton`, // Estimación CO2
+            lastUpdate: "En tiempo real",
+            avgCost: `$${pricePerCredit} MXN/m³`, // Precio unitario visible
+            region: project.region
+          };
+        });
+
+        setCompanies(formattedData);
+      } catch (error) {
+        console.error('Error conectando a Supabase:', error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjects();
   }, []);
 
-  // Select first company on mount
+  // Función auxiliar para etiquetar el riesgo hídrico
+  const calculateRiskLabel = (score) => {
+    if (!score) return "N/A";
+    if (score >= 80) return "Crítico"; // Rojo: Urge inversión
+    if (score >= 50) return "Alto";    // Naranja
+    return "Medio";                    // Amarillo/Verde
+  };
+
+  // 2. ORDENAMIENTO (Business Logic)
+  // Ordenamos por "Oportunidad Financiera" (Valor total del lote) descendente
+  const sortedCompanies = useMemo(() => {
+    return [...companies].sort((a, b) => {
+      // Limpiamos el string de dinero para obtener el número puro
+      const valA = parseFloat(a.creditsSupported.replace(/[^0-9.-]+/g, ""));
+      const valB = parseFloat(b.creditsSupported.replace(/[^0-9.-]+/g, ""));
+      return valB - valA;
+    });
+  }, [companies]);
+
+  // Selección automática del primer proyecto (el más valioso) al cargar
   useEffect(() => {
     if (sortedCompanies.length > 0 && !selectedCompany) {
       setSelectedCompany(sortedCompanies[0]);
     }
   }, [sortedCompanies, selectedCompany]);
 
-  // Force dark mode
+  // Forzar modo oscuro (Estética "Bloomberg Terminal")
   useEffect(() => {
     document.documentElement.classList.add("dark");
     return () => {
@@ -136,22 +111,32 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header 
+    <div className="min-h-screen bg-background text-foreground">
+      <Header
         onLoginClick={() => setShowLogin(true)}
         onRegisterClick={() => setShowRegister(true)}
       />
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* Top Section: Chart + KPIs */}
-        <ImpactChart company={selectedCompany} />
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-xl font-mono text-primary animate-pulse">
+              Cargando Mercado de Agua...
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Top Section: KPIs y Gráficas del Proyecto Seleccionado */}
+            <ImpactChart company={selectedCompany} />
 
-        {/* Bottom Section: Company Ranking Table */}
-        <CompanyTable 
-          companies={sortedCompanies}
-          selectedCompany={selectedCompany}
-          onSelectCompany={setSelectedCompany}
-        />
+            {/* Bottom Section: La "Bolsa" de Proyectos */}
+            <CompanyTable
+              companies={sortedCompanies}
+              selectedCompany={selectedCompany}
+              onSelectCompany={setSelectedCompany}
+            />
+          </>
+        )}
       </main>
 
       {/* Modals */}
