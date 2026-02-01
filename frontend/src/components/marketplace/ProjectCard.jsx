@@ -38,7 +38,7 @@ export function ProjectCard({ project, onViewDetail, onBuy }) {
           alt={project.name}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
-        
+
         {/* Badges overlay */}
         <div className="absolute left-2 top-2 flex flex-wrap gap-1">
           {project.badges.map((badge) => (
@@ -122,7 +122,7 @@ export function ProjectCard({ project, onViewDetail, onBuy }) {
           disabled={isSold}
           onClick={() => onBuy(project)}
         >
-          {isSold ? "Vendido" : "Comprar"}
+          {isSold ? "Vendido" : "Invertir"}
         </Button>
       </CardFooter>
     </Card>

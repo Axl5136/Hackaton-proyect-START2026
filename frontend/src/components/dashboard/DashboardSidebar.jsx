@@ -27,6 +27,11 @@ import {
 
 const menuItems = [
   {
+    title: "Inicio",
+    url: "/",
+    icon: LayoutDashboard,
+  },
+  {
     title: "Dashboard",
     url: "/dashboard",
     icon: LayoutDashboard,
@@ -38,7 +43,7 @@ const menuItems = [
   },
   {
     title: "Certificados",
-    url: "/dashboard#certificados",
+    url: "/certificates",
     icon: Award,
   },
   {
@@ -54,10 +59,7 @@ export function DashboardSidebar() {
   const isCollapsed = state === "collapsed";
 
   const isActive = (url) => {
-    if (url.includes("#")) {
-      return location.pathname + location.hash === url;
-    }
-    return location.pathname === url;
+    return location.pathname === url || location.pathname.startsWith(url + "/");
   };
 
   return (

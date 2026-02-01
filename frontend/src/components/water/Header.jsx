@@ -36,6 +36,7 @@ export function Header({ onLoginClick, onRegisterClick }) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    window.location.href = "/"; // Force reload/redirect to home
     // El listener de arriba (onAuthStateChange) actualizará el estado automáticamente
   };
 

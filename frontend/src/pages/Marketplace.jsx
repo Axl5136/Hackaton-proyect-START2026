@@ -6,7 +6,7 @@ import { FilterBar } from "@/components/marketplace/FilterBar";
 import { ProjectCard } from "@/components/marketplace/ProjectCard";
 import { ProjectDetailModal } from "@/components/marketplace/ProjectDetailModal";
 import { MapPreview } from "@/components/marketplace/MapPreview";
-import { mockProjects } from "@/data/mockProjects";
+import { supabase } from "../supabase";
 
 export default function Marketplace() {
   // --- ESTADOS REINSTALADOS ---
@@ -142,11 +142,6 @@ export default function Marketplace() {
             <DashboardHeader companyName="AguaCorp México" title="Marketplace de Proyectos" />
 
             <main className="flex-1 space-y-6 p-4 md:p-6 lg:p-8">
-              {/* Map Preview */}
-              <section aria-label="Mapa de proyectos">
-                <MapPreview projects={projects} />
-              </section>
-
               {/* Filters */}
               <section aria-label="Filtros">
                 <FilterBar
@@ -188,18 +183,18 @@ export default function Marketplace() {
                   </div>
                 )}
               </section>
-            </main>
-          </SidebarInset>
-        </div>
-      </SidebarProvider>
+            </main >
+          </SidebarInset >
+        </div >
+      </SidebarProvider >
 
       {/* Project Detail Modal */}
-      <ProjectDetailModal
+      < ProjectDetailModal
         project={selectedProject}
         open={modalOpen}
         onOpenChange={setModalOpen}
         onPurchase={handlePurchase}
       />
-    </div>
+    </div >
   );
-}
+} 
