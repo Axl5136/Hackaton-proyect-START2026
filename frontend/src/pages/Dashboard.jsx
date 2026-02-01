@@ -6,8 +6,6 @@ import { KPICards } from "@/components/dashboard/KPICards";
 import { WaterSavingsChart } from "@/components/dashboard/WaterSavingsChart";
 import { CertificatesTable } from "@/components/dashboard/CertificatesTable";
 import { supabase } from "../supabase";
-
-// ✅ IMPORTAMOS TU MAPA REAL Y QUITAMOS EL PLACEHOLDER
 import WaterMap from "@/components/water/WaterMap";
 
 export default function Dashboard() {
@@ -15,9 +13,9 @@ export default function Dashboard() {
   const [companyName, setCompanyName] = useState("Cargando...");
   const [user, setUser] = useState(null);
 
-  // Estado para los datos y selección
   const [projects, setProjects] = useState([]);
-  const [selectedProject, setSelectedProject] = useState(null); // Para sincronía con el mapa
+  const [chartHistory, setChartHistory] = useState([]);
+  const [selectedProject, setSelectedProject] = useState(null);
   const [kpiStats, setKpiStats] = useState({
     totalWater: 0,
     totalInvestment: 0,
@@ -38,30 +36,51 @@ export default function Dashboard() {
           setCompanyName("Panel Corporativo");
         }
 
-        const { data: projectsData, error } = await supabase
+        // 1. Fetch Proyectos
+        const { data: projectsData, error: pError } = await supabase
           .from('projects')
           .select('*');
+        if (pError) throw pError;
 
-        if (error) throw error;
+        // 2. Fetch Transacciones para la curva acumulada
+        const { data: transData, error: tError } = await supabase
+          .from('transactions')
+          .select('amount_paid, timestamp')
+          .order('timestamp', { ascending: true });
+        if (tError) throw tError;
 
+        // --- LÓGICA DE PROCESAMIENTO PARA LA GRÁFICA ---
+        let acumuladorDinero = 0;
+        let acumuladorAgua = 0;
+        const M3_FACTOR = 0.5; // Factor de conversión: 1 USD = 0.5 m3 (Ajustable)
+
+        const processedHistory = (transData || []).map(t => {
+          acumuladorDinero += Number(t.amount_paid);
+          acumuladorAgua += (Number(t.amount_paid) * M3_FACTOR);
+          
+          return {
+            // Generamos varias llaves para asegurar compatibilidad con el componente Chart
+            name: new Date(t.timestamp).toLocaleDateString('es-MX', { month: 'short' }),
+            month: new Date(t.timestamp).toLocaleDateString('es-MX', { month: 'short' }),
+            total: acumuladorDinero,
+            m3: acumuladorAgua,
+            value: acumuladorAgua // Por si el chart usa 'value'
+          };
+        });
+
+        setChartHistory(processedHistory);
+
+        // --- KPIs Y PROYECTOS ---
         if (projectsData) {
-          // Formateamos para que el WaterMap reconozca las coordenadas y datos
           const formattedProjects = projectsData.map(p => ({
             ...p,
             waterSaved: `${(p.water_savings_m3 || 0).toLocaleString()} m³`,
             co2Avoided: `${Math.floor((p.water_savings_m3 || 0) * 0.14)} ton`
           }));
 
-          const waterSum = projectsData.reduce((acc, curr) => acc + (Number(curr.water_savings_m3) || 0), 0);
-          const totalValue = projectsData.reduce((acc, curr) => {
-            const savings = Number(curr.water_savings_m3) || 0;
-            const price = Number(curr.price_per_credit) || 0;
-            return acc + (savings * price);
-          }, 0);
-
           setKpiStats({
-            totalWater: waterSum,
-            totalInvestment: totalValue,
+            totalWater: acumuladorAgua, // Ahora el KPI de agua viene de transacciones reales
+            totalInvestment: acumuladorDinero,
             activeProjects: projectsData.length
           });
 
@@ -99,7 +118,6 @@ export default function Dashboard() {
                     <KPICards stats={kpiStats} />
                   </section>
 
-                  {/* ✅ AQUÍ CAMBIAMOS EL PLACEHOLDER POR TU WATERMAP */}
                   <section aria-label="Mapa de riesgo hídrico" className="h-[400px] bg-card rounded-xl border border-border overflow-hidden shadow-lg relative">
                     <WaterMap
                       projects={projects}
@@ -109,7 +127,8 @@ export default function Dashboard() {
                   </section>
 
                   <section aria-label="Evolución del agua ahorrada">
-                    <WaterSavingsChart data={projects} />
+                    {/* chartHistory ahora lleva m3, total y value */}
+                    <WaterSavingsChart data={chartHistory} />
                   </section>
 
                   <section aria-label="Certificados">

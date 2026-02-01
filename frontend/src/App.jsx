@@ -11,36 +11,33 @@ import Certificates from "./pages/Certificates";
 import CertificateSuccess from "./pages/CertificateSuccess";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
-
+import Dashboard from "./pages/Dashboard";
+import Marketplace from "./pages/Marketplace";
 
 const queryClient = new QueryClient();
 
-const App = () => {
-  useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/settings" element={<Settings />} />
+          <Route path="/marketplace" element={<Marketplace />} />
+          <Route path="/certificates" element={<Certificates />} />
+          <Route path="/certificate-success" element={<CertificateSuccess />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/marketplace" element={<Marketplace />} />
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/dashboard/settings" element={<Settings />} />
-            <Route path="/marketplace" element={<Marketplace />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="/certificates" element={<Certificates />} />
-            <Route path="/certificate-success" element={<CertificateSuccess />} />
-            <Route path="*" element={<NotFound />} />
-            {/* Removed duplicate routes that were below catch-all */}
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
-};
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;
