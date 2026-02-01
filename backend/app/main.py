@@ -6,50 +6,53 @@ import os
 import secrets
 import datetime
 from dotenv import load_dotenv
+import uvicorn
 
-# 1. Configuración Inicial
-load_dotenv() # Carga las claves del archivo .env
+# Esto le dice a Python: "busca el archivo .env en la misma carpeta donde estoy parado"
+basedir = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(os.path.join(basedir, "../.env")) 
 
-# OJO: Dile a tu dev que ponga esto en su archivo .env
 url: str = os.environ.get("SUPABASE_URL")
 key: str = os.environ.get("SUPABASE_KEY")
+
+if not url or not key:
+    print("⚠️ ¡Error! Falta SUPABASE_URL o SUPABASE_KEY en el archivo .env")
+
 supabase: Client = create_client(url, key)
 
-app = FastAPI()
+app = FastAPI(title="AquaNexus API")
 
-# 2. Configurar CORS (Para que el Frontend de Arturo no sea bloqueado)
+# 2. Configurar CORS - Vital para la conexión con el Frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # En producción esto se cambia, para hackathon déjalo así
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# --- MODELOS DE DATOS (Pydantic) ---
+# --- MODELOS DE DATOS ---
 class BuyRequest(BaseModel):
     project_id: str
     buyer_name: str = "Empresa Demo SA de CV"
 
 # --- UTILIDADES ---
 def generate_fake_blockchain_hash():
-    """Genera un string hexadecimal que parece un hash de Ethereum"""
     return "0x" + secrets.token_hex(32)
 
 def calculate_co2(water_m3):
-    """Simulación de Climatiq: 1m3 agua ahorrada (bombeo) = 0.14 kg CO2e"""
-    # Factor hardcodeado basado en promedio de energía de bombeo en México
-    return round(water_m3 * 0.14 / 1000, 2) # Retorna Toneladas
+    # 1m3 agua ahorrada = 0.14 kg CO2e -> Convertido a Toneladas
+    return round(water_m3 * 0.14 / 1000, 4)
 
 # --- ENDPOINTS ---
 
 @app.get("/")
 def read_root():
-    return {"status": "AquaNexus API Online 🚀"}
+    return {"status": "AquaNexus API Online 🚀", "version": "1.0.0"}
 
 @app.get("/api/projects")
 def get_projects():
-    """Trae todos los ranchos para pintar el mapa"""
+    """Trae todos los proyectos para el mapa"""
     response = supabase.table("projects").select("*").execute()
     return response.data
 
@@ -63,15 +66,9 @@ def get_project_detail(project_id: str):
 
 @app.post("/api/buy-credits")
 def buy_credits(request: BuyRequest):
-    """
-    EL ENDPOINT CRÍTICO:
-    1. Verifica que esté disponible.
-    2. Lo marca como 'Sold'.
-    3. Genera el Hash.
-    4. Guarda la transacción.
-    """
+    """Proceso de compra y generación de certificado"""
     
-    # Paso A: Buscar el proyecto
+    # Buscar proyecto
     project_res = supabase.table("projects").select("*").eq("id", request.project_id).execute()
     
     if not project_res.data:
@@ -80,25 +77,24 @@ def buy_credits(request: BuyRequest):
     project = project_res.data[0]
     
     if project["status"] != "Available":
-        raise HTTPException(status_code=400, detail="Este proyecto ya fue financiado por otra empresa.")
+        raise HTTPException(status_code=400, detail="Este proyecto ya fue financiado.")
 
-    # Paso B: Generar el Hash "Blockchain"
     tx_hash = generate_fake_blockchain_hash()
     
-    # Paso C: Actualizar estado del proyecto a 'Sold' (o 'Funded')
+    # Actualizar proyecto
     supabase.table("projects").update({"status": "Sold", "verified_by_ai": True}).eq("id", request.project_id).execute()
     
-    # Paso D: Guardar la transacción
+    # Registrar transacción
     transaction_data = {
         "project_id": request.project_id,
         "buyer_company": request.buyer_name,
-        "amount_paid": float(project["price_per_credit"]) * 1000, # Simulación de monto total
+        "amount_paid": float(project.get("price_per_credit", 0)) * 1000,
         "transaction_hash": tx_hash,
         "timestamp": datetime.datetime.now().isoformat()
     }
     supabase.table("transactions").insert(transaction_data).execute()
     
-    # Paso E: Respuesta triunfal al Frontend
+    # ESTE ES EL BLOQUE QUE DABA ERROR, ASEGÚRATE QUE LAS LLAVES COINCIDAN
     return {
         "status": "success",
         "message": "Resiliencia Adquirida",
@@ -106,32 +102,7 @@ def buy_credits(request: BuyRequest):
             "id": f"CERT-{request.project_id.upper()}-2026",
             "owner": request.buyer_name,
             "hash": tx_hash,
-            "water_offset": f"{project['water_savings_m3']} m3",
-            "co2_offset": f"{calculate_co2(project['water_savings_m3'])} Ton CO2e"
+            "water_offset": f"{project.get('water_savings_m3', 0)} m3",
+            "co2_offset": f"{calculate_co2(project.get('water_savings_m3', 0))} Ton CO2e"
         }
-    }
-
-
-@app.get("/api/dashboard/company")
-def get_company_stats():
-    """
-    Endpoint para Arturo: Trae los datos de la empresa para el Dashboard de Miedo.
-    """
-    # En un caso real usaríamos ID de usuario, para la demo traemos al primero (Tesla)
-    response = supabase.table("companies").select("*").limit(1).execute()
-    
-    if not response.data:
-        return {"error": "No hay empresa configurada"}
-    
-    company = response.data[0]
-    
-    # Calculamos porcentaje para la gráfica de progreso
-    progress = round((company['co2_achieved_tons'] / company['co2_target_tons']) * 100, 1)
-    
-    return {
-        "company_name": company['name'],
-        "risk_level": company['water_risk_level'], # Aquí sale "CRITICO"
-        "sustainability_goal": f"{progress}% Cumplido",
-        "budget_remaining": f"${company['total_budget']:,}",
-        "raw_data": company
-    }
+    } # <-- Aquí se cierran todas
