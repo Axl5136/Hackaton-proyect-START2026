@@ -13,9 +13,8 @@ export default function Dashboard() {
   const [companyName, setCompanyName] = useState("Cargando...");
   const [user, setUser] = useState(null);
 
-  // Estados para datos
   const [projects, setProjects] = useState([]);
-  const [chartHistory, setChartHistory] = useState([]); // ✅ Estado para la gráfica real
+  const [chartHistory, setChartHistory] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [kpiStats, setKpiStats] = useState({
     totalWater: 0,
@@ -37,34 +36,41 @@ export default function Dashboard() {
           setCompanyName("Panel Corporativo");
         }
 
-        // 1. CARGAMOS PROYECTOS (Para el Mapa)
+        // 1. Fetch Proyectos
         const { data: projectsData, error: pError } = await supabase
           .from('projects')
           .select('*');
-
         if (pError) throw pError;
 
-        // 2. CARGAMOS TRANSACCIONES (Para la Gráfica Acumulada)
+        // 2. Fetch Transacciones para la curva acumulada
         const { data: transData, error: tError } = await supabase
           .from('transactions')
           .select('amount_paid, timestamp')
           .order('timestamp', { ascending: true });
-
         if (tError) throw tError;
 
-        // --- PROCESAMIENTO DE TRANSACCIONES PARA LA GRÁFICA ---
-        let totalAcumulado = 0;
+        // --- LÓGICA DE PROCESAMIENTO PARA LA GRÁFICA ---
+        let acumuladorDinero = 0;
+        let acumuladorAgua = 0;
+        const M3_FACTOR = 0.5; // Factor de conversión: 1 USD = 0.5 m3 (Ajustable)
+
         const processedHistory = (transData || []).map(t => {
-          totalAcumulado += t.amount_paid;
+          acumuladorDinero += Number(t.amount_paid);
+          acumuladorAgua += (Number(t.amount_paid) * M3_FACTOR);
+          
           return {
-            // "month" es lo que suele pedir Recharts para el eje X
+            // Generamos varias llaves para asegurar compatibilidad con el componente Chart
+            name: new Date(t.timestamp).toLocaleDateString('es-MX', { month: 'short' }),
             month: new Date(t.timestamp).toLocaleDateString('es-MX', { month: 'short' }),
-            total: totalAcumulado
+            total: acumuladorDinero,
+            m3: acumuladorAgua,
+            value: acumuladorAgua // Por si el chart usa 'value'
           };
         });
+
         setChartHistory(processedHistory);
 
-        // --- PROCESAMIENTO DE PROYECTOS PARA EL MAPA ---
+        // --- KPIs Y PROYECTOS ---
         if (projectsData) {
           const formattedProjects = projectsData.map(p => ({
             ...p,
@@ -72,12 +78,9 @@ export default function Dashboard() {
             co2Avoided: `${Math.floor((p.water_savings_m3 || 0) * 0.14)} ton`
           }));
 
-          // KPIs basados en la realidad de la tabla de proyectos
-          const waterSum = projectsData.reduce((acc, curr) => acc + (Number(curr.water_savings_m3) || 0), 0);
-          
           setKpiStats({
-            totalWater: waterSum,
-            totalInvestment: totalAcumulado, // Usamos el total de las transacciones reales
+            totalWater: acumuladorAgua, // Ahora el KPI de agua viene de transacciones reales
+            totalInvestment: acumuladorDinero,
             activeProjects: projectsData.length
           });
 
@@ -123,8 +126,8 @@ export default function Dashboard() {
                     />
                   </section>
 
-                  {/* ✅ PASAMOS chartHistory EN LUGAR DE projects */}
                   <section aria-label="Evolución del agua ahorrada">
+                    {/* chartHistory ahora lleva m3, total y value */}
                     <WaterSavingsChart data={chartHistory} />
                   </section>
 
