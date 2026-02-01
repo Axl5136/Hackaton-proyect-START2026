@@ -1,15 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../supabase";
 
-// IMPORTS DE COMPONENTES DE ARTURO
 import { Header } from "@/components/water/Header";
 import { ImpactChart } from "@/components/water/ImpactChart";
 import { CompanyTable } from "@/components/water/CompanyTable";
 import { LoginModal } from "@/components/water/LoginModal";
 import { RegisterModal } from "@/components/water/RegisterModal";
-
-// TU MOTOR GEOESPACIAL
-import WaterMap from "@/components/water/WaterMap";
 
 const Index = () => {
   const [showLogin, setShowLogin] = useState(false);
@@ -18,14 +14,11 @@ const Index = () => {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. CARGA DE DATOS DESDE SUPABASE
   useEffect(() => {
     const fetchProjects = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from('projects')
-          .select('*');
+        const { data, error } = await supabase.from('projects').select('*');
 
         if (error) throw error;
 
@@ -34,45 +27,34 @@ const Index = () => {
           const pricePerCredit = Number(project.price_per_credit) || 0;
           const totalValue = waterVolume * pricePerCredit;
 
-          // --- MEJORA DE TU AMIGO: PREPARACIÓN DE DATOS PARA LAS CURVAS ---
+          // --- 🛰️ INTEGRACIÓN DE TENDENCIAS SATELITALES (El "Factor Wow") ---
           const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
           const rawNdwi = project.historical_ndwi || [0, 0, 0, 0, 0, 0];
 
           const chartTrends = rawNdwi.map((val, i) => ({
             month: months[i] || `M${i + 1}`,
-            actual: val, // Curva de Riesgo (NDWI real)
-            proyectado: val * 1.15 // Curva de Impacto (Simulación de mejora)
+            actual: val,
+            proyectado: val * 1.15 // Simulación de mejora hídrica
           }));
 
           return {
             id: project.id,
             name: project.name || "Proyecto Sin Nombre",
             industry: project.crop || "Agricultura",
-
-            // DATOS PARA IMPACTCHART Y TABLE
             waterSaved: `${waterVolume.toLocaleString()} m³`,
             creditsSupported: `${waterVolume.toLocaleString()} m³`,
+            marketCap: `$${totalValue.toLocaleString('es-MX')} MXN`,
 
-            // Pasamos las tendencias preparadas para las dos curvas de la gráfica
+            // Pasamos las tendencias ya procesadas para el ImpactChart
             historical_ndwi: chartTrends,
 
-            marketCap: `$${totalValue.toLocaleString('es-MX')} MXN`,
             risk: calculateLegacyRisk(project.risk_score),
             verification: project.verified_by_ai ? "Muy alta" : "Media",
-
             projects: 1,
-            // Lógica de CO₂: 1m³ = 0.14 ton evitadas
-            co2Avoided: `${Math.floor(waterVolume * 0.14)} ton`,
+            co2Avoided: `${Math.floor(waterVolume * 0.14)} ton`, // Factor oficial del backend
             lastUpdate: "Hace 1 día",
             avgCost: `$${pricePerCredit} MXN/m³`,
-            region: project.region,
-
-            // DATOS CRÍTICOS PARA EL MAPA
-            coordinates: project.coordinates,
-            price_per_credit: project.price_per_credit,
-            water_savings_m3: project.water_savings_m3,
-            risk_score: project.risk_score,
-            status: project.status
+            region: project.region
           };
         });
 
@@ -87,7 +69,6 @@ const Index = () => {
     fetchProjects();
   }, []);
 
-  // 2. LÓGICA DE RIESGO PARA SEMÁFOROS
   const calculateLegacyRisk = (score) => {
     if (!score) return "Bajo";
     if (score >= 80) return "Alto";
@@ -95,7 +76,6 @@ const Index = () => {
     return "Bajo";
   };
 
-  // 3. ORDENAMIENTO POR VALOR DE MERCADO
   const sortedCompanies = useMemo(() => {
     return [...companies].sort((a, b) => {
       const valA = parseFloat(a.marketCap?.replace(/[^0-9.-]+/g, "")) || 0;
@@ -104,21 +84,19 @@ const Index = () => {
     });
   }, [companies]);
 
-  // 4. SELECCIÓN INICIAL AUTOMÁTICA
   useEffect(() => {
     if (sortedCompanies.length > 0 && !selectedCompany) {
       setSelectedCompany(sortedCompanies[0]);
     }
   }, [sortedCompanies, selectedCompany]);
 
-  // 5. MODO OSCURO POR DEFECTO
   useEffect(() => {
     document.documentElement.classList.add("dark");
     return () => document.documentElement.classList.remove("dark");
   }, []);
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/30">
+    <div className="min-h-screen bg-background text-foreground font-sans">
       <Header
         onLoginClick={() => setShowLogin(true)}
         onRegisterClick={() => setShowRegister(true)}
@@ -126,58 +104,35 @@ const Index = () => {
 
       <main className="container mx-auto px-4 py-6 space-y-6">
         {loading ? (
-          <div className="flex flex-col items-center justify-center h-96 space-y-4">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-muted-foreground animate-pulse">Sincronizando datos satelitales...</p>
+          <div className="flex items-center justify-center h-64 text-muted-foreground animate-pulse">
+            Cargando mercado de agua...
           </div>
         ) : (
           <>
-            {/* --- DASHBOARD DE MIEDO: Tu Grid se mantiene intacto --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-auto lg:h-[550px]">
-              {/* Bloque de Gráfica de Impacto (Con los datos nuevos de tu amigo) */}
-              <div className="bg-card rounded-xl border border-border overflow-hidden shadow-2xl transition-all hover:border-primary/50">
-                {selectedCompany && <ImpactChart company={selectedCompany} />}
-              </div>
+            {/* ✅ IMPACT CHART: Con datos satelitales integrados */}
+            {selectedCompany && <ImpactChart company={selectedCompany} />}
 
-              {/* Bloque de Tu Mapa Geoespacial */}
-              <div className="bg-card rounded-xl border border-border overflow-hidden shadow-2xl relative transition-all hover:border-primary/50">
-                <WaterMap
-                  projects={sortedCompanies}
-                  onProjectSelect={setSelectedCompany}
-                  selectedId={selectedCompany?.id}
-                />
-              </div>
-            </div>
-
-            {/* --- TABLA DE MERCADO FINTECH --- */}
-            <div className="bg-card rounded-xl border border-border shadow-2xl overflow-hidden">
-              <CompanyTable
-                companies={sortedCompanies}
-                selectedCompany={selectedCompany}
-                onSelectCompany={setSelectedCompany}
-              />
-            </div>
+            {/* ✅ COMPANY TABLE: Sin títulos duplicados */}
+            <CompanyTable
+              companies={sortedCompanies}
+              selectedCompany={selectedCompany}
+              onSelectCompany={setSelectedCompany}
+            />
           </>
         )}
       </main>
 
-      {/* --- CAPA DE MODALES (Con la navegación fluida de Arturo) --- */}
+      {/* MODALES CON NAVEGACIÓN PRO */}
       {showLogin && (
         <LoginModal
           onClose={() => setShowLogin(false)}
-          onSwitchToRegister={() => {
-            setShowLogin(false);
-            setShowRegister(true);
-          }}
+          onSwitchToRegister={() => { setShowLogin(false); setShowRegister(true); }}
         />
       )}
       {showRegister && (
         <RegisterModal
           onClose={() => setShowRegister(false)}
-          onSwitchToLogin={() => {
-            setShowRegister(false);
-            setShowLogin(true);
-          }}
+          onSwitchToLogin={() => { setShowRegister(false); setShowLogin(true); }}
         />
       )}
     </div>

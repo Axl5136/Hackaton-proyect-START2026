@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Map, { Marker, Popup, NavigationControl } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-// Usamos tu token real que me pasaste
+// Usamos tu token real de Mapbox
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiYXJ0dXJvLXVsaXNlczUxMzYiLCJhIjoiY21sMzN4NjR6MHEyNTNtcHl4NW1kbm8yaiJ9.XmuQzLJzWpfGgNJEe-zEJQ';
 
 const WaterMap = ({ projects, onProjectSelect, selectedId }) => {
@@ -14,11 +14,12 @@ const WaterMap = ({ projects, onProjectSelect, selectedId }) => {
         zoom: 4.5
     });
 
-    // EFECTO DE SINCRONÍA: Si seleccionas en la tabla, el mapa vuela al rancho
+    // 1. BLINDAJE EN LA SINCRONÍA (flyTo)
     useEffect(() => {
         if (selectedId && projects.length > 0) {
             const selected = projects.find(p => p.id === selectedId);
-            if (selected?.coordinates) {
+            // ✅ Verificamos que existan coordenadas antes de intentar volar hacia ellas
+            if (selected?.coordinates?.lng && selected?.coordinates?.lat) {
                 mapRef.current?.flyTo({
                     center: [selected.coordinates.lng, selected.coordinates.lat],
                     duration: 2000,
@@ -30,7 +31,7 @@ const WaterMap = ({ projects, onProjectSelect, selectedId }) => {
 
     const handleMarkerClick = (rancho) => {
         setPopupInfo(rancho);
-        onProjectSelect(rancho); // Avisa al Index para actualizar gráficas
+        onProjectSelect(rancho);
     };
 
     return (
@@ -44,46 +45,50 @@ const WaterMap = ({ projects, onProjectSelect, selectedId }) => {
             >
                 <NavigationControl position="top-right" />
 
-                {/* FACTOR WOW: Resplandor de Riesgo dinámico */}
-                {projects.map((rancho) => {
-                    const { lng, lat } = rancho.coordinates;
-                    // Usamos el risk_score que viene de Supabase
-                    if (rancho.risk_score > 80) {
+                {/* 2. BLINDAJE EN RESPLANDOR DE RIESGO ✅ */}
+                {projects
+                    .filter(rancho => rancho.coordinates?.lng && rancho.coordinates?.lat)
+                    .map((rancho) => {
+                        const { lng, lat } = rancho.coordinates;
+                        if (rancho.risk_score > 80) {
+                            return (
+                                <Marker key={`glow-${rancho.id}`} longitude={lng} latitude={lat}>
+                                    <div className="w-12 h-12 bg-red-600/20 rounded-full animate-ping border border-red-500/50" />
+                                </Marker>
+                            );
+                        }
+                        return null;
+                    })}
+
+                {/* 3. BLINDAJE EN MARCADORES PRINCIPALES ✅ */}
+                {projects
+                    .filter(rancho => rancho.coordinates?.lng && rancho.coordinates?.lat)
+                    .map((rancho) => {
+                        const { lng, lat } = rancho.coordinates;
+                        const isSelected = selectedId === rancho.id;
+                        const pinColor = rancho.status === 'Available' ? '#F97316' : '#3B82F6';
+
                         return (
-                            <Marker key={`glow-${rancho.id}`} longitude={lng} latitude={lat}>
-                                <div className="w-12 h-12 bg-red-600/20 rounded-full animate-ping border border-red-500/50" />
+                            <Marker
+                                key={rancho.id}
+                                longitude={lng}
+                                latitude={lat}
+                                onClick={e => {
+                                    e.originalEvent.stopPropagation();
+                                    handleMarkerClick(rancho);
+                                }}
+                            >
+                                <div className={`cursor-pointer transition-all drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] ${isSelected ? 'scale-150' : 'hover:scale-125'}`}>
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill={pinColor}>
+                                        <path d="M12 0c-4.198 0-8 3.403-8 7.602 0 4.198 3.469 9.21 8 16.398 4.531-7.188 8-12.2 8-16.398 0-4.199-3.801-7.602-8-7.602zm0 11c-1.657 0-3-1.343-3-3s1.343-3 3-3 3 1.343 3 3-1.343 3-3 3z" />
+                                    </svg>
+                                </div>
                             </Marker>
                         );
-                    }
-                    return null;
-                })}
+                    })}
 
-                {/* MARCADORES DINÁMICOS */}
-                {projects.map((rancho) => {
-                    const { lng, lat } = rancho.coordinates;
-                    const isSelected = selectedId === rancho.id;
-                    const pinColor = rancho.status === 'Available' ? '#F97316' : '#3B82F6';
-
-                    return (
-                        <Marker
-                            key={rancho.id}
-                            longitude={lng}
-                            latitude={lat}
-                            onClick={e => {
-                                e.originalEvent.stopPropagation();
-                                handleMarkerClick(rancho);
-                            }}
-                        >
-                            <div className={`cursor-pointer transition-all drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] ${isSelected ? 'scale-150' : 'hover:scale-125'}`}>
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill={pinColor}>
-                                    <path d="M12 0c-4.198 0-8 3.403-8 7.602 0 4.198 3.469 9.21 8 16.398 4.531-7.188 8-12.2 8-16.398 0-4.199-3.801-7.602-8-7.602zm0 11c-1.657 0-3-1.343-3-3s1.343-3 3-3 3 1.343 3 3-1.343 3-3 3z" />
-                                </svg>
-                            </div>
-                        </Marker>
-                    );
-                })}
-
-                {popupInfo && (
+                {/* 4. BLINDAJE EXTRA EN EL POPUP ✅ */}
+                {popupInfo && popupInfo.coordinates?.lng && (
                     <Popup
                         anchor="top"
                         longitude={popupInfo.coordinates.lng}
@@ -98,7 +103,7 @@ const WaterMap = ({ projects, onProjectSelect, selectedId }) => {
                                 <p>🌱 **Mitigación CO₂:** {popupInfo.co2Avoided}</p>
                                 <div className="mt-2 bg-blue-50 p-1 rounded border border-blue-100">
                                     <p className="text-blue-800 font-bold text-center">
-                                        Comisión: $ $$(popupInfo.price_per_credit * 0.15).toFixed(2)$$ USD
+                                        Comisión: $ {(popupInfo.price_per_credit * 0.15).toFixed(2)} USD
                                     </p>
                                 </div>
                             </div>
