@@ -29,7 +29,7 @@ function VerificationBadge({ level }) {
   const colors = {
     "Muy alta": "bg-emerald-500/10 text-emerald-500 border-emerald-500/30",
     "Alta": "bg-blue-500/10 text-blue-500 border-blue-500/30",
-    "Verificada (IA)": "bg-cyan-500/10 text-cyan-400 border-cyan-500/30", // Nuevo estado para tu IA
+    "Verificada (IA)": "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
     "Media": "bg-yellow-500/10 text-yellow-500 border-yellow-500/30",
     "Básica": "bg-muted text-muted-foreground border-border",
     "En Proceso": "bg-gray-800 text-gray-400 border-dashed border-gray-600",
@@ -46,7 +46,6 @@ function VerificationBadge({ level }) {
 
 export function CompanyTable({ companies, selectedCompany, onSelectCompany }) {
   const [search, setSearch] = useState("");
-  // Default sort: Market Value (Show me the money first)
   const [sortBy, setSortBy] = useState("marketValue");
   const [industryFilter, setIndustryFilter] = useState("all");
   const [regionFilter, setRegionFilter] = useState("all");
@@ -56,7 +55,9 @@ export function CompanyTable({ companies, selectedCompany, onSelectCompany }) {
 
   const filteredAndSortedCompanies = useMemo(() => {
     let result = companies.filter((company) => {
-      const matchesSearch = company.name.toLowerCase().includes(search.toLowerCase());
+      // Validación segura por si acaso company.name viene undefined
+      const safeName = company.name || "";
+      const matchesSearch = safeName.toLowerCase().includes(search.toLowerCase());
       const matchesIndustry = industryFilter === "all" || company.industry === industryFilter;
       const matchesRegion = regionFilter === "all" || company.region === regionFilter;
       return matchesSearch && matchesIndustry && matchesRegion;
@@ -64,18 +65,21 @@ export function CompanyTable({ companies, selectedCompany, onSelectCompany }) {
 
     // Sort Logic
     result.sort((a, b) => {
-      const getNum = (str) => parseFloat(str.replace(/[^0-9.-]+/g, "")); // Helper para limpiar "$", "m3", ","
+      // Helper: Limpia "$", ",", "m³" y devuelve número float. Si falla, devuelve 0.
+      const getNum = (str) => {
+        if (!str) return 0;
+        return parseFloat(str.replace(/[^0-9.-]+/g, "")) || 0;
+      };
 
       if (sortBy === "waterSaved") {
         return getNum(b.waterSaved) - getNum(a.waterSaved);
       } else if (sortBy === "marketValue") {
-        // Ordenar por Dinero (creditsSupported ahora trae dinero)
-        return getNum(b.creditsSupported) - getNum(a.creditsSupported);
+        // CORRECCIÓN 1: Ordenamos por el campo 'marketCap' que trae el dinero
+        return getNum(b.marketCap) - getNum(a.marketCap);
       } else if (sortBy === "risk") {
         const riskOrder = { "Crítico": 4, "Alto": 3, "Medio": 2, "Bajo": 1 };
         return (riskOrder[b.risk] || 0) - (riskOrder[a.risk] || 0);
       } else if (sortBy === "verification") {
-        // Prioridad a lo verificado por IA
         const verOrder = { "Verificada (IA)": 5, "Muy alta": 4, "Alta": 3, "Media": 2, "Básica": 1, "En Proceso": 0 };
         return (verOrder[b.verification] || 0) - (verOrder[a.verification] || 0);
       } else if (sortBy === "cost") {
@@ -169,7 +173,7 @@ export function CompanyTable({ companies, selectedCompany, onSelectCompany }) {
                       <TooltipContent>Agua ahorrada y lista para transaccionar</TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  {/* AQUÍ ESTÁ EL CAMBIO IMPORTANTE: Créditos -> Valor de Mercado */}
+
                   <TableHead className="text-muted-foreground text-xs font-semibold hidden lg:table-cell">
                     <Tooltip>
                       <TooltipTrigger className="flex items-center gap-1 text-emerald-500">
@@ -218,12 +222,10 @@ export function CompanyTable({ companies, selectedCompany, onSelectCompany }) {
                     </TableCell>
                     <TableCell className="font-semibold text-sm text-blue-400">{company.waterSaved}</TableCell>
 
-                    {/* CELDA DE DINERO DESTACADA */}
+                    {/* CORRECCIÓN 2: Renderizamos marketCap (dinero) en lugar de creditsSupported */}
                     <TableCell className="hidden lg:table-cell text-sm font-mono text-emerald-400 font-bold tracking-tight">
-                      {company.creditsSupported}
+                      {company.marketCap}
                     </TableCell>
-
-                    {/* Quitamos la columna 'Proyectos' porque dijimos 1 lote = 1 proyecto */}
 
                     <TableCell><RiskBadge risk={company.risk} /></TableCell>
                     <TableCell><VerificationBadge level={company.verification} /></TableCell>

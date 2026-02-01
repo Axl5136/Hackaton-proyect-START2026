@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Droplets, AlertTriangle, FolderOpen, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Droplets, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Activity } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -12,348 +12,236 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
 } from "recharts";
 
-// Mock chart data generator based on company
+// --- HELPERS FINANCIEROS ---
+const parseValue = (str) => {
+  if (!str) return 0;
+  return parseFloat(str.replace(/[^0-9.-]+/g, "")) || 0;
+};
+
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(value);
+};
+
+// --- GENERADOR DE HISTORIAL "FAKE" (EL SECRETO) ---
 function generateChartData(company, metric) {
   const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-  const baseValue = parseInt(company.waterSaved.replace(/[^0-9]/g, "")) || 1000;
-  
-  if (metric === "water") {
-    return months.map((month, i) => ({
-      name: month,
-      value: Math.round((baseValue / 12) * (0.5 + Math.random() * 0.8) * (1 + i * 0.05)),
-    }));
-  } else if (metric === "risk") {
-    const riskBase = company.risk === "Alto" ? 75 : company.risk === "Medio" ? 50 : 25;
-    return months.map((month) => ({
-      name: month,
-      value: Math.round(riskBase + (Math.random() - 0.5) * 20),
-    }));
-  } else {
-    return months.map((month, i) => ({
-      name: month,
-      value: Math.round(company.projects * (0.3 + (i / 12) * 0.7)),
-    }));
-  }
+
+  // Extraemos valores base reales
+  const waterTotal = parseValue(company.waterSaved);
+  const moneyTotal = parseValue(company.marketCap);
+
+  // Determinamos factor de volatilidad basado en el riesgo
+  const riskLabel = company.risk || "Bajo";
+  const volatility = riskLabel === "Alto" || riskLabel === "Crítico" ? 0.4 : 0.1; // 40% vs 10% de ruido
+
+  return months.map((month, i) => {
+    const progress = (i + 1) / 12; // 0.1 a 1.0
+
+    let value = 0;
+
+    if (metric === "financial") {
+      // Curva de crecimiento de inversión (Logarítmica suave + Ruido)
+      // Empieza al 30% del valor y sube hasta el 100%
+      const baseCurve = moneyTotal * (0.3 + (progress * 0.7));
+      const noise = baseCurve * (Math.random() - 0.5) * volatility * 0.5;
+      value = Math.round(baseCurve + noise);
+
+    } else if (metric === "water") {
+      // Acumulación de agua (Lineal con estacionalidad)
+      const seasonalFactor = 1 + (Math.sin(i) * 0.1); // Lluvias simuladas
+      value = Math.round((waterTotal * progress) * seasonalFactor);
+
+    } else if (metric === "risk") {
+      // Índice de Estrés Hídrico (0-100%)
+      const baseRisk = riskLabel === "Alto" ? 75 : riskLabel === "Medio" ? 50 : 25;
+      // Mucho ruido si es alto riesgo (picos de sequía)
+      const riskNoise = (Math.random() - 0.5) * (volatility * 100);
+      value = Math.max(0, Math.min(100, Math.round(baseRisk + riskNoise)));
+    }
+
+    return { name: month, value };
+  });
 }
 
-function KpiCard({ icon: Icon, title, value, trend, color, tooltip, isActive, onClick }) {
+// --- COMPONENTE DE TARJETA KPI ---
+function KpiCard({ icon: Icon, title, value, subtext, color, isActive, onClick }) {
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onClick={onClick}
-            className={`flex-1 p-4 rounded-lg border transition-all hover:scale-[1.02] text-left ${
-              isActive 
-                ? "border-primary bg-primary/10 ring-1 ring-primary/50" 
-                : "border-border/50 bg-card/50 hover:border-primary/50"
-            }`}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Icon className={`h-4 w-4 ${color}`} />
-              <span className="text-sm text-muted-foreground">{title}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xl font-bold">{value}</span>
-              {trend && (
-                <span className={`flex items-center gap-1 text-xs ${
-                  trend > 0 ? "text-water-low" : trend < 0 ? "text-water-high" : "text-muted-foreground"
-                }`}>
-                  {trend > 0 ? <TrendingUp className="h-3 w-3" /> : 
-                   trend < 0 ? <TrendingDown className="h-3 w-3" /> : 
-                   <Minus className="h-3 w-3" />}
-                  {Math.abs(trend)}%
-                </span>
-              )}
-            </div>
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{tooltip}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <button
+      onClick={onClick}
+      className={`flex-1 p-3 rounded-lg border transition-all text-left relative overflow-hidden group ${isActive
+          ? `border-${color}-500 bg-${color}-500/5 ring-1 ring-${color}-500/30`
+          : "border-border/50 bg-card/40 hover:bg-card/80"
+        }`}
+    >
+      <div className="flex justify-between items-start mb-2">
+        <div className={`p-1.5 rounded-md bg-${color}-500/10 text-${color}-500`}>
+          <Icon className="h-4 w-4" />
+        </div>
+        {isActive && <div className={`h-2 w-2 rounded-full bg-${color}-500 animate-pulse`} />}
+      </div>
+
+      <div className="space-y-0.5">
+        <span className="text-xs text-muted-foreground font-medium block">{title}</span>
+        <span className={`text-lg font-bold tracking-tight text-foreground group-hover:text-${color}-500 transition-colors`}>
+          {value}
+        </span>
+        {subtext && <span className="text-[10px] text-muted-foreground">{subtext}</span>}
+      </div>
+    </button>
   );
 }
 
-function RiskIndicator({ risk }) {
-  const config = {
-    Bajo: { color: "text-water-low", bg: "bg-water-low", label: "🟢 Bajo" },
-    Medio: { color: "text-water-medium", bg: "bg-water-medium", label: "🟠 Medio" },
-    Alto: { color: "text-water-high", bg: "bg-water-high", label: "🔴 Alto" },
-  };
-  return <span className={config[risk].color}>{config[risk].label}</span>;
-}
-
+// --- COMPONENTE PRINCIPAL ---
 export function ImpactChart({ company }) {
   const [timeRange, setTimeRange] = useState("1A");
-  const [activeMetric, setActiveMetric] = useState("water");
+  const [activeMetric, setActiveMetric] = useState("financial"); // Default: Show me the money
 
   if (!company) return null;
 
-  const chartData = generateChartData(company, activeMetric);
+  // Generamos datos al vuelo
+  const chartData = useMemo(() => generateChartData(company, activeMetric), [company, activeMetric]);
+
+  // Configuración de colores según métrica
+  const config = {
+    financial: { color: "#10b981", name: "Valor de Mercado", gradient: "emerald" }, // Verde Dinero
+    water: { color: "#3b82f6", name: "Agua Ahorrada", gradient: "blue" },       // Azul Agua
+    risk: { color: "#f43f5e", name: "Riesgo Hídrico", gradient: "rose" }        // Rojo Peligro
+  };
+
+  const currentConfig = config[activeMetric];
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      const unit = activeMetric === "water" ? " m³" : activeMetric === "risk" ? "%" : "";
+      let val = payload[0].value;
+      let formatted = val;
+
+      if (activeMetric === "financial") formatted = formatCurrency(val);
+      if (activeMetric === "water") formatted = `${val.toLocaleString()} m³`;
+      if (activeMetric === "risk") formatted = `${val}%`;
+
       return (
-        <div className="bg-background border border-border rounded-lg px-3 py-2 shadow-lg">
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="text-sm font-semibold text-foreground">
-            {payload[0].value.toLocaleString()}{unit}
-          </p>
+        <div className="bg-background/95 backdrop-blur border border-border rounded-lg px-3 py-2 shadow-xl">
+          <p className="text-xs text-muted-foreground mb-1">{label}</p>
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full`} style={{ backgroundColor: currentConfig.color }} />
+            <p className="text-sm font-bold text-foreground">{formatted}</p>
+          </div>
         </div>
       );
     }
     return null;
   };
 
-  const renderChart = () => {
-    const commonProps = {
-      data: chartData,
-      margin: { top: 10, right: 10, left: 0, bottom: 0 },
-    };
-
-    if (activeMetric === "water") {
-      return (
-        <AreaChart {...commonProps}>
-          <defs>
-            <linearGradient id="waterGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-          <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-          <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-          <RechartsTooltip content={<CustomTooltip />} />
-          <Area
-            type="monotone"
-            dataKey="value"
-            stroke="hsl(var(--primary))"
-            strokeWidth={2}
-            fill="url(#waterGradient)"
-          />
-        </AreaChart>
-      );
-    } else if (activeMetric === "risk") {
-      return (
-        <AreaChart {...commonProps}>
-          <defs>
-            <linearGradient id="riskGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(var(--water-high))" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="hsl(var(--water-high))" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-          <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-          <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[0, 100]} />
-          <RechartsTooltip content={<CustomTooltip />} />
-          <Area
-            type="monotone"
-            dataKey="value"
-            stroke="hsl(var(--water-high))"
-            strokeWidth={2}
-            fill="url(#riskGradient)"
-          />
-        </AreaChart>
-      );
-    } else {
-      return (
-        <BarChart {...commonProps}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-          <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-          <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-          <RechartsTooltip content={<CustomTooltip />} />
-          <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-        </BarChart>
-      );
-    }
-  };
-
-  // Generate data for mini charts
-  const waterData = generateChartData(company, "water");
-  const riskData = generateChartData(company, "risk");
-  const projectsData = generateChartData(company, "projects");
-
-  const MiniChart = ({ data, color, type = "area" }) => (
-    <div className="h-12 w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        {type === "area" ? (
-          <AreaChart data={data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id={`mini-${color}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={`hsl(var(--${color}))`} stopOpacity={0.4} />
-                <stop offset="95%" stopColor={`hsl(var(--${color}))`} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <Area
-              type="monotone"
-              dataKey="value"
-              stroke={`hsl(var(--${color}))`}
-              strokeWidth={1.5}
-              fill={`url(#mini-${color})`}
-            />
-          </AreaChart>
-        ) : (
-          <BarChart data={data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-            <Bar dataKey="value" fill={`hsl(var(--${color}))`} radius={[2, 2, 0, 0]} />
-          </BarChart>
-        )}
-      </ResponsiveContainer>
-    </div>
-  );
-
   return (
-    <Card className="bg-card/50 border-border/50">
-      <CardHeader className="pb-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <Card className="bg-card/50 border-border/50 shadow-sm">
+      <CardHeader className="pb-2 pt-4 px-4 sm:px-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <CardTitle className="text-xl">
-              Evolución de Impacto — {company.name}
-            </CardTitle>
-            <CardDescription>
-              Créditos de agua = inversión en proyectos agrícolas que ahorran agua.
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg font-bold">{company.name}</CardTitle>
+              {company.risk === "Alto" && (
+                <span className="bg-red-500/10 text-red-500 text-[10px] px-2 py-0.5 rounded-full border border-red-500/20 font-mono">
+                  VOLÁTIL
+                </span>
+              )}
+            </div>
+            <CardDescription className="text-xs mt-1">
+              Análisis de rendimiento y riesgo en tiempo real.
             </CardDescription>
           </div>
-          
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Time Range */}
-            <div className="flex gap-1 bg-secondary/50 p-1 rounded-lg">
-              {["1M", "3M", "6M", "1A"].map((range) => (
-                <Button
-                  key={range}
-                  variant={timeRange === range ? "secondary" : "ghost"}
-                  size="sm"
-                  className="h-7 px-3 text-xs"
-                  onClick={() => setTimeRange(range)}
-                >
-                  {range}
-                </Button>
-              ))}
-            </div>
-            
-            {/* Metric Tabs */}
-            <Tabs value={activeMetric} onValueChange={setActiveMetric}>
-              <TabsList className="bg-secondary/50">
-                <TabsTrigger value="water" className="text-xs">
-                  <Droplets className="h-3 w-3 mr-1" /> Agua
-                </TabsTrigger>
-                <TabsTrigger value="risk" className="text-xs">
-                  <AlertTriangle className="h-3 w-3 mr-1" /> Riesgo
-                </TabsTrigger>
-                <TabsTrigger value="projects" className="text-xs">
-                  <FolderOpen className="h-3 w-3 mr-1" /> Proyectos
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+
+          <div className="flex items-center gap-2 bg-secondary/30 p-1 rounded-lg self-start sm:self-auto">
+            {["1M", "3M", "6M", "1A"].map((range) => (
+              <Button
+                key={range}
+                variant={timeRange === range ? "default" : "ghost"}
+                size="sm"
+                className={`h-7 px-3 text-xs ${timeRange === range ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
+                onClick={() => setTimeRange(range)}
+              >
+                {range}
+              </Button>
+            ))}
           </div>
         </div>
       </CardHeader>
-      
-      <CardContent className="space-y-4">
-        {/* Main Chart + Mini Charts Row */}
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Main Chart */}
-          <div className="flex-1 h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              {renderChart()}
-            </ResponsiveContainer>
-          </div>
-          
-          {/* Mini Charts Sidebar */}
-          <div className="lg:w-48 flex flex-row lg:flex-col gap-3">
-            {/* Mini Agua */}
-            <button
-              onClick={() => setActiveMetric("water")}
-              className={`flex-1 p-3 rounded-lg border transition-all hover:scale-[1.02] ${
-                activeMetric === "water"
-                  ? "border-primary bg-primary/10 ring-1 ring-primary/50"
-                  : "border-border/50 bg-card/50 hover:border-primary/50"
-              }`}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <Droplets className="h-3 w-3 text-primary" />
-                <span className="text-xs text-muted-foreground">Agua</span>
-              </div>
-              <p className="text-sm font-semibold text-foreground mb-2">{company.waterSaved}</p>
-              <MiniChart data={waterData} color="primary" />
-            </button>
 
-            {/* Mini Riesgo */}
-            <button
-              onClick={() => setActiveMetric("risk")}
-              className={`flex-1 p-3 rounded-lg border transition-all hover:scale-[1.02] ${
-                activeMetric === "risk"
-                  ? "border-water-high bg-water-high/10 ring-1 ring-water-high/50"
-                  : "border-border/50 bg-card/50 hover:border-water-high/50"
-              }`}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <AlertTriangle className="h-3 w-3 text-water-medium" />
-                <span className="text-xs text-muted-foreground">Riesgo</span>
-              </div>
-              <p className="text-sm font-semibold text-foreground mb-2">
-                <RiskIndicator risk={company.risk} />
-              </p>
-              <MiniChart data={riskData} color="water-high" />
-            </button>
-
-            {/* Mini Proyectos */}
-            <button
-              onClick={() => setActiveMetric("projects")}
-              className={`flex-1 p-3 rounded-lg border transition-all hover:scale-[1.02] ${
-                activeMetric === "projects"
-                  ? "border-water-low bg-water-low/10 ring-1 ring-water-low/50"
-                  : "border-border/50 bg-card/50 hover:border-water-low/50"
-              }`}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <FolderOpen className="h-3 w-3 text-water-low" />
-                <span className="text-xs text-muted-foreground">Proyectos</span>
-              </div>
-              <p className="text-sm font-semibold text-foreground mb-2">{company.projects}</p>
-              <MiniChart data={projectsData} color="water-low" type="bar" />
-            </button>
-          </div>
+      <CardContent className="px-4 sm:px-6 pb-6 space-y-6">
+        {/* GRÁFICA PRINCIPAL */}
+        <div className="h-[300px] w-full mt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id={`gradient-${activeMetric}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={currentConfig.color} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={currentConfig.color} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
+              <XAxis
+                dataKey="name"
+                stroke="hsl(var(--muted-foreground))"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+                dy={10}
+              />
+              <YAxis
+                stroke="hsl(var(--muted-foreground))"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => {
+                  if (activeMetric === 'financial') return `$${value / 1000}k`;
+                  if (activeMetric === 'water') return `${value / 1000}k`;
+                  return `${value}%`;
+                }}
+              />
+              <RechartsTooltip content={<CustomTooltip />} cursor={{ stroke: currentConfig.color, strokeWidth: 1, strokeDasharray: '4 4' }} />
+              <Area
+                type="monotone"
+                dataKey="value"
+                stroke={currentConfig.color}
+                strokeWidth={3}
+                fill={`url(#gradient-${activeMetric})`}
+                animationDuration={1500}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
-        
-        {/* KPIs Row */}
-        <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-border/30">
+
+        {/* SELECTORES DE MÉTRICAS (KPIs) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <KpiCard
-            icon={AlertTriangle}
-            title="Riesgo hídrico"
-            value={<RiskIndicator risk={company.risk} />}
-            color="text-water-medium"
-            tooltip="Qué tan vulnerable es la zona a estrés hídrico."
-            isActive={activeMetric === "risk"}
-            onClick={() => setActiveMetric("risk")}
+            icon={DollarSign}
+            title="Valor de Mercado"
+            value={company.marketCap}
+            subtext="Capitalización del lote"
+            color="emerald" // Tailwind: text-emerald-500
+            isActive={activeMetric === "financial"}
+            onClick={() => setActiveMetric("financial")}
           />
+
           <KpiCard
             icon={Droplets}
-            title="Agua verificada"
+            title="Agua Verificada"
             value={company.waterSaved}
-            trend={12}
-            color="text-primary"
-            tooltip="Ahorro confirmado con evidencia."
+            subtext="Activo subyacente (m³)"
+            color="blue" // Tailwind: text-blue-500
             isActive={activeMetric === "water"}
             onClick={() => setActiveMetric("water")}
           />
+
           <KpiCard
-            icon={FolderOpen}
-            title="Proyectos activos"
-            value={company.projects}
-            trend={5}
-            color="text-water-low"
-            tooltip="Proyectos disponibles o en ejecución."
-            isActive={activeMetric === "projects"}
-            onClick={() => setActiveMetric("projects")}
+            icon={Activity}
+            title="Nivel de Riesgo"
+            value={company.risk}
+            subtext="Volatilidad hídrica"
+            color="rose" // Tailwind: text-rose-500
+            isActive={activeMetric === "risk"}
+            onClick={() => setActiveMetric("risk")}
           />
         </div>
       </CardContent>
