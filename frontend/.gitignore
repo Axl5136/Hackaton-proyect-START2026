@@ -29,3 +29,15 @@ backend/app/.env
 *.sln
 *.sw?
 *.local
+
+# Ignorar el entorno virtual en cualquier subcarpeta
+**/venv/
+venv/
+
+# Ignorar la llave JSON específicamente en la carpeta backend
+backend/service-account.json
+service-account.json
+
+# Archivos de Python adicionales
+*.pyc
+.pytest_cache/
