@@ -1,0 +1,140 @@
+import { NavLink, useLocation } from "react-router-dom";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  Award,
+  Settings,
+  Droplets,
+  ChevronLeft,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+const menuItems = [
+  {
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "Marketplace",
+    url: "/marketplace",
+    icon: ShoppingCart,
+  },
+  {
+    title: "Certificados",
+    url: "/dashboard#certificados",
+    icon: Award,
+  },
+  {
+    title: "Configuración",
+    url: "/dashboard/settings",
+    icon: Settings,
+  },
+];
+
+export function DashboardSidebar() {
+  const { state } = useSidebar();
+  const location = useLocation();
+  const isCollapsed = state === "collapsed";
+
+  const isActive = (url) => {
+    if (url.includes("#")) {
+      return location.pathname + location.hash === url;
+    }
+    return location.pathname === url;
+  };
+
+  return (
+    <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border">
+      <SidebarHeader className="p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <Droplets className="h-6 w-6 text-primary" />
+          </div>
+          {!isCollapsed && (
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-sidebar-foreground">
+                HydroCredits
+              </span>
+              <span className="text-xs text-muted-foreground">
+                Plataforma de Agua
+              </span>
+            </div>
+          )}
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent className="px-2">
+        <SidebarMenu>
+          {menuItems.map((item) => (
+            <SidebarMenuItem key={item.title}>
+              {isCollapsed ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url)}
+                      className={cn(
+                        "transition-colors",
+                        isActive(item.url) &&
+                          "bg-primary/10 text-primary hover:bg-primary/20"
+                      )}
+                    >
+                      <NavLink to={item.url}>
+                        <item.icon className="h-5 w-5" />
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">{item.title}</TooltipContent>
+                </Tooltip>
+              ) : (
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive(item.url)}
+                  className={cn(
+                    "transition-colors",
+                    isActive(item.url) &&
+                      "bg-primary/10 text-primary hover:bg-primary/20"
+                  )}
+                >
+                  <NavLink to={item.url}>
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.title}</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              )}
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarContent>
+
+      <SidebarFooter className="p-2">
+        <SidebarTrigger className="w-full justify-center hover:bg-primary/10">
+          <ChevronLeft
+            className={cn(
+              "h-4 w-4 transition-transform duration-200",
+              isCollapsed && "rotate-180"
+            )}
+          />
+          {!isCollapsed && <span className="ml-2">Ocultar</span>}
+        </SidebarTrigger>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
