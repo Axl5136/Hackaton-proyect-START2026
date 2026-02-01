@@ -4,7 +4,7 @@ import { ImpactChart } from "@/components/water/ImpactChart";
 import { CompanyTable } from "@/components/water/CompanyTable";
 import { LoginModal } from "@/components/water/LoginModal";
 import { RegisterModal } from "@/components/water/RegisterModal";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "../supabase";
 
 // Mock data as fallback when Supabase fails or returns empty
 const mockCompanies = [
