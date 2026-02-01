@@ -1,0 +1,245 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -100.8122,
+          20.5223
+        ]
+      },
+      "properties": {
+        "id": "aqx-001",
+        "name": "Rancho El Bajío",
+        "region": "Celaya, Guanajuato",
+        "crop": "Brócoli de Exportación",
+        "risk_score": 88,
+        "water_savings_m3": 15000,
+        "price_per_credit": 2.5,
+        "story": "Uso intensivo de pozo profundo. Necesitan transición urgente a riego por goteo.",
+        "status": "Available",
+        "verified_by_ai": false,
+        "historical_ndwi": [
+          {
+            "month": "Ene",
+            "ndwi": 0.42
+          },
+          {
+            "month": "Mar",
+            "ndwi": 0.38
+          },
+          {
+            "month": "May",
+            "ndwi": 0.31
+          },
+          {
+            "month": "Jul",
+            "ndwi": 0.22
+          },
+          {
+            "month": "Sep",
+            "ndwi": 0.15
+          }
+        ],
+        "coordinates": {
+          "lat": 20.5223,
+          "lng": -100.8122
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -103.8349,
+          20.8844
+        ]
+      },
+      "properties": {
+        "id": "aqx-002",
+        "name": "Agave San José",
+        "region": "Tequila, Jalisco",
+        "crop": "Agave Tequilana",
+        "risk_score": 45,
+        "water_savings_m3": 45000,
+        "price_per_credit": 1.8,
+        "story": "Proyecto de optimización hídrica mediante sensores de humedad.",
+        "status": "Available",
+        "verified_by_ai": false,
+        "historical_ndwi": [
+          {
+            "month": "Ene",
+            "ndwi": 0.5
+          },
+          {
+            "month": "Mar",
+            "ndwi": 0.48
+          },
+          {
+            "month": "May",
+            "ndwi": 0.45
+          },
+          {
+            "month": "Jul",
+            "ndwi": 0.46
+          },
+          {
+            "month": "Sep",
+            "ndwi": 0.44
+          }
+        ],
+        "coordinates": {
+          "lat": 20.8844,
+          "lng": -103.8349
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -105.4706,
+          28.1922
+        ]
+      },
+      "properties": {
+        "id": "aqx-003",
+        "name": "Nogalera Los Pinos",
+        "region": "Delicias, Chihuahua",
+        "crop": "Nuez Encarcelada",
+        "risk_score": 95,
+        "water_savings_m3": 8000,
+        "price_per_credit": 4.2,
+        "story": "Zona de sequía extrema. Infraestructura de captación de lluvia.",
+        "status": "Sold",
+        "verified_by_ai": true,
+        "historical_ndwi": [
+          {
+            "month": "Ene",
+            "ndwi": 0.35
+          },
+          {
+            "month": "Mar",
+            "ndwi": 0.28
+          },
+          {
+            "month": "May",
+            "ndwi": 0.15
+          },
+          {
+            "month": "Jul",
+            "ndwi": 0.05
+          },
+          {
+            "month": "Sep",
+            "ndwi": -0.02
+          }
+        ],
+        "coordinates": {
+          "lat": 28.1922,
+          "lng": -105.4706
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -99.8252,
+          25.1872
+        ]
+      },
+      "properties": {
+        "id": "aqx-004",
+        "name": "Citrus Valley",
+        "region": "Montemorelos, Nuevo León",
+        "crop": "Naranja de Mesa",
+        "risk_score": 72,
+        "water_savings_m3": 22000,
+        "price_per_credit": 3.1,
+        "story": "Sistemas de filtrado para reutilización de aguas grises.",
+        "status": "Available",
+        "verified_by_ai": false,
+        "historical_ndwi": [
+          {
+            "month": "Ene",
+            "ndwi": 0.45
+          },
+          {
+            "month": "Mar",
+            "ndwi": 0.40
+          },
+          {
+            "month": "May",
+            "ndwi": 0.32
+          },
+          {
+            "month": "Jul",
+            "ndwi": 0.28
+          },
+          {
+            "month": "Sep",
+            "ndwi": 0.20
+          }
+        ],
+        "coordinates": {
+          "lat": 25.1872,
+          "lng": -99.8252
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -116.6661,
+          32.0322
+        ]
+      },
+      "properties": {
+        "id": "aqx-005",
+        "name": "Viñedo Guadalupe",
+        "region": "Ensenada, BC",
+        "crop": "Uva Cabernet",
+        "risk_score": 92,
+        "water_savings_m3": 12000,
+        "price_per_credit": 5.5,
+        "story": "Captura de niebla y desalinización solar para riego.",
+        "status": "Available",
+        "verified_by_ai": false,
+        "historical_ndwi": [
+          {
+            "month": "Ene",
+            "ndwi": 0.30
+          },
+          {
+            "month": "Mar",
+            "ndwi": 0.22
+          },
+          {
+            "month": "May",
+            "ndwi": 0.12
+          },
+          {
+            "month": "Jul",
+            "ndwi": 0.08
+          },
+          {
+            "month": "Sep",
+            "ndwi": 0.02
+          }
+        ],
+        "coordinates": {
+          "lat": 32.0322,
+          "lng": -116.6661
+        }
+      }
+    }
+  ]
+}
