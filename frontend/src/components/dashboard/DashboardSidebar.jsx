@@ -26,11 +26,7 @@ import {
 } from "@/components/ui/tooltip";
 
 const menuItems = [
-  {
-    title: "Inicio",
-    url: "/",
-    icon: LayoutDashboard,
-  },
+
   {
     title: "Dashboard",
     url: "/dashboard",
