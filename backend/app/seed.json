@@ -1,0 +1,82 @@
+[
+    {
+        "id": "aqx-001",
+        "name": "Rancho El Bajío",
+        "region": "Celaya, Guanajuato",
+        "coordinates": {
+            "lat": 20.5223,
+            "lng": -100.8122
+        },
+        "crop": "Brócoli de Exportación",
+        "risk_score": 88,
+        "water_savings_m3": 15000,
+        "price_per_credit": 2.50,
+        "story": "Uso intensivo de pozo profundo. Necesitan transición urgente a riego por goteo para evitar el colapso del acuífero local.",
+        "status": "Available",
+        "verified_by_ai": false
+    },
+    {
+        "id": "aqx-002",
+        "name": "Agave San José",
+        "region": "Tequila, Jalisco",
+        "coordinates": {
+            "lat": 20.8844,
+            "lng": -103.8349
+        },
+        "crop": "Agave Tequilana",
+        "risk_score": 45,
+        "water_savings_m3": 45000,
+        "price_per_credit": 1.80,
+        "story": "Proyecto de optimización hídrica mediante sensores de humedad. Buscan vender excedentes de agua recuperada.",
+        "status": "Available",
+        "verified_by_ai": false
+    },
+    {
+        "id": "aqx-003",
+        "name": "Nogalera Los Pinos",
+        "region": "Delicias, Chihuahua",
+        "coordinates": {
+            "lat": 28.1922,
+            "lng": -105.4706
+        },
+        "crop": "Nuez Encarcelada",
+        "risk_score": 95,
+        "water_savings_m3": 8000,
+        "price_per_credit": 4.20,
+        "story": "Zona de sequía extrema. El crédito financiará infraestructura de captación de lluvia y digitalización de canales.",
+        "status": "Sold",
+        "verified_by_ai": true
+    },
+    {
+        "id": "aqx-004",
+        "name": "Citrus Valley",
+        "region": "Montemorelos, Nuevo León",
+        "coordinates": {
+            "lat": 25.1872,
+            "lng": -99.8252
+        },
+        "crop": "Naranja de Mesa",
+        "risk_score": 72,
+        "water_savings_m3": 22000,
+        "price_per_credit": 3.10,
+        "story": "Implementación de sistemas de filtrado para reutilización de aguas grises en el riego de árboles frutales.",
+        "status": "Available",
+        "verified_by_ai": false
+    },
+    {
+        "id": "aqx-005",
+        "name": "Viñedo Guadalupe",
+        "region": "Ensenada, BC",
+        "coordinates": {
+            "lat": 32.0322,
+            "lng": -116.6661
+        },
+        "crop": "Uva Cabernet",
+        "risk_score": 92,
+        "water_savings_m3": 12000,
+        "price_per_credit": 5.50,
+        "story": "Captura de niebla y desalinización solar para riego. Alta tecnología en zona de estrés hídrico máximo.",
+        "status": "Available",
+        "verified_by_ai": false
+    }
+]
