@@ -7,6 +7,8 @@ import secrets
 import datetime
 from dotenv import load_dotenv
 import uvicorn
+import uuid
+import datetime
 
 # Esto le dice a Python: "busca el archivo .env en la misma carpeta donde estoy parado"
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -63,46 +65,55 @@ def get_project_detail(project_id: str):
     if not response.data:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     return response.data[0]
-
+    
 @app.post("/api/buy-credits")
 def buy_credits(request: BuyRequest):
-    """Proceso de compra y generación de certificado"""
-    
-    # Buscar proyecto
+    """
+    Proceso de compra: Cambia estatus, genera hash y registra la transacción
+    """
+    # 1. Verificar si el proyecto existe y está disponible
     project_res = supabase.table("projects").select("*").eq("id", request.project_id).execute()
     
     if not project_res.data:
-        raise HTTPException(status_code=404, detail="Proyecto no existe")
+        raise HTTPException(status_code=404, detail="El proyecto no existe en la base de datos.")
     
     project = project_res.data[0]
     
-    if project["status"] != "Available":
-        raise HTTPException(status_code=400, detail="Este proyecto ya fue financiado.")
+    if project["status"] == "Sold":
+        raise HTTPException(status_code=400, detail="Este proyecto ya ha sido financiado por otra entidad.")
 
-    tx_hash = generate_fake_blockchain_hash()
+    # 2. SIMULACIÓN DE BLOCKCHAIN: Generar un Hash único de transacción
+    # Usamos un UUID + un prefijo para que parezca un hash de Ledger/Ethereum
+    tx_hash = f"0x{uuid.uuid4().hex}{uuid.uuid4().hex[:8]}"
     
-    # Actualizar proyecto
-    supabase.table("projects").update({"status": "Sold", "verified_by_ai": True}).eq("id", request.project_id).execute()
+    # 3. ACTUALIZACIÓN EN SUPABASE (El momento crítico)
+    # Cambiamos status a 'Sold' y marcamos como verificado por IA
+    update_res = supabase.table("projects").update({
+        "status": "Sold", 
+        "verified_by_ai": True
+    }).eq("id", request.project_id).execute()
     
-    # Registrar transacción
+    # 4. REGISTRAR LA TRANSACCIÓN (Para el historial)
     transaction_data = {
         "project_id": request.project_id,
         "buyer_company": request.buyer_name,
-        "amount_paid": float(project.get("price_per_credit", 0)) * 1000,
+        "amount_paid": float(project.get("price_per_credit", 0)) * project.get("water_savings_m3", 0),
         "transaction_hash": tx_hash,
         "timestamp": datetime.datetime.now().isoformat()
     }
     supabase.table("transactions").insert(transaction_data).execute()
     
-    # ESTE ES EL BLOQUE QUE DABA ERROR, ASEGÚRATE QUE LAS LLAVES COINCIDAN
+    # 5. RESPUESTA PARA EL FRONTEND
+    # Enviamos todo lo necesario para que Arturo cambie el color del pin y muestre el éxito
     return {
         "status": "success",
-        "message": "Resiliencia Adquirida",
-        "certificate": {
-            "id": f"CERT-{request.project_id.upper()}-2026",
-            "owner": request.buyer_name,
-            "hash": tx_hash,
-            "water_offset": f"{project.get('water_savings_m3', 0)} m3",
+        "message": f"¡Créditos adquiridos para {project['name']}!",
+        "data": {
+            "project_id": request.project_id,
+            "new_status": "Sold",
+            "transaction_hash": tx_hash,
+            "certificate_id": f"CERT-{request.project_id.upper()}-{datetime.datetime.now().year}",
+            "impact_m3": project.get("water_savings_m3", 0),
             "co2_offset": f"{calculate_co2(project.get('water_savings_m3', 0))} Ton CO2e"
         }
-    } # <-- Aquí se cierran todas
+    }
