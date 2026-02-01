@@ -9,7 +9,7 @@ try:
     creds = service_account.Credentials.from_service_account_file(
         KEY_FILE, scopes=['https://www.googleapis.com/auth/earthengine']
     )
-    ee.Initialize(credentials=creds, project=PROJECT_ID)
+    ee.Initialize(credentials=creds, project=gee-backend-access)
     print("✅ Conexión establecida con Google Earth Engine")
 except Exception as e:
     print(f"❌ Error al inicializar GEE: {e}")
