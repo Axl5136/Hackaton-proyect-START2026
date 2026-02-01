@@ -61,7 +61,17 @@ export function DashboardSidebar() {
   };
 
   return (
-    <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border">
+    // SOLUCIÓN DEFINITIVA:
+    // Usamos el prop 'style' para sobrescribir las variables CSS de shadcn.
+    // Esto hace que el borde sea invisible y el fondo transparente a nivel de raíz.
+    <Sidebar
+      collapsible="offcanvas"
+      className="border-none"
+      style={{
+        "--sidebar-border": "transparent",
+        "--sidebar-background": "transparent", // O usa "hsl(var(--background))" si transparente da problemas
+      }}
+    >
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -69,7 +79,7 @@ export function DashboardSidebar() {
           </div>
           {!isCollapsed && (
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-sidebar-foreground">
+              <span className="text-sm font-semibold text-foreground">
                 HydroCredits
               </span>
               <span className="text-xs text-muted-foreground">
@@ -91,9 +101,9 @@ export function DashboardSidebar() {
                       asChild
                       isActive={isActive(item.url)}
                       className={cn(
-                        "transition-colors",
+                        "transition-colors hover:bg-primary/10 hover:text-primary",
                         isActive(item.url) &&
-                          "bg-primary/10 text-primary hover:bg-primary/20"
+                        "bg-primary/10 text-primary font-medium"
                       )}
                     >
                       <NavLink to={item.url}>
@@ -108,9 +118,9 @@ export function DashboardSidebar() {
                   asChild
                   isActive={isActive(item.url)}
                   className={cn(
-                    "transition-colors",
+                    "transition-colors hover:bg-primary/10 hover:text-primary",
                     isActive(item.url) &&
-                      "bg-primary/10 text-primary hover:bg-primary/20"
+                    "bg-primary/10 text-primary font-medium"
                   )}
                 >
                   <NavLink to={item.url}>
@@ -125,7 +135,7 @@ export function DashboardSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-2">
-        <SidebarTrigger className="w-full justify-center hover:bg-primary/10">
+        <SidebarTrigger className="w-full justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary">
           <ChevronLeft
             className={cn(
               "h-4 w-4 transition-transform duration-200",
