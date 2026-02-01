@@ -41,3 +41,13 @@ service-account.json
 # Archivos de Python adicionales
 *.pyc
 .pytest_cache/
+
+# Entorno Virtual
+venv/
+.env
+__pycache__/
+*.pyc
+
+# Archivos de configuración locales
+.env.local
+.DS_Store

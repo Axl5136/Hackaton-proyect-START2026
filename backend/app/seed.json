@@ -3,80 +3,100 @@
         "id": "aqx-001",
         "name": "Rancho El Bajío",
         "region": "Celaya, Guanajuato",
-        "coordinates": {
-            "lat": 20.5223,
-            "lng": -100.8122
-        },
+        "coordinates": {"lat": 20.5223, "lng": -100.8122},
         "crop": "Brócoli de Exportación",
         "risk_score": 88,
         "water_savings_m3": 15000,
         "price_per_credit": 2.50,
-        "story": "Uso intensivo de pozo profundo. Necesitan transición urgente a riego por goteo para evitar el colapso del acuífero local.",
+        "story": "Uso intensivo de pozo profundo. Necesitan transición urgente a riego por goteo.",
         "status": "Available",
-        "verified_by_ai": false
+        "verified_by_ai": false,
+        "historical_ndwi": [
+            {"month": "Ene", "actual": 0.42, "proyectado": 0.42},
+            {"month": "Mar", "actual": 0.38, "proyectado": 0.39},
+            {"month": "May", "actual": 0.31, "proyectado": 0.35},
+            {"month": "Jul", "actual": 0.22, "proyectado": 0.34},
+            {"month": "Sep", "actual": 0.15, "proyectado": 0.33}
+        ]
     },
     {
         "id": "aqx-002",
         "name": "Agave San José",
         "region": "Tequila, Jalisco",
-        "coordinates": {
-            "lat": 20.8844,
-            "lng": -103.8349
-        },
+        "coordinates": {"lat": 20.8844, "lng": -103.8349},
         "crop": "Agave Tequilana",
         "risk_score": 45,
         "water_savings_m3": 45000,
         "price_per_credit": 1.80,
-        "story": "Proyecto de optimización hídrica mediante sensores de humedad. Buscan vender excedentes de agua recuperada.",
+        "story": "Proyecto de optimización hídrica mediante sensores de humedad.",
         "status": "Available",
-        "verified_by_ai": false
+        "verified_by_ai": false,
+        "historical_ndwi": [
+            {"month": "Ene", "actual": 0.50, "proyectado": 0.50},
+            {"month": "Mar", "actual": 0.48, "proyectado": 0.49},
+            {"month": "May", "actual": 0.45, "proyectado": 0.48},
+            {"month": "Jul", "actual": 0.46, "proyectado": 0.49},
+            {"month": "Sep", "actual": 0.44, "proyectado": 0.48}
+        ]
     },
     {
         "id": "aqx-003",
         "name": "Nogalera Los Pinos",
         "region": "Delicias, Chihuahua",
-        "coordinates": {
-            "lat": 28.1922,
-            "lng": -105.4706
-        },
+        "coordinates": {"lat": 28.1922, "lng": -105.4706},
         "crop": "Nuez Encarcelada",
         "risk_score": 95,
         "water_savings_m3": 8000,
         "price_per_credit": 4.20,
-        "story": "Zona de sequía extrema. El crédito financiará infraestructura de captación de lluvia y digitalización de canales.",
+        "story": "Zona de sequía extrema. Infraestructura de captación de lluvia.",
         "status": "Sold",
-        "verified_by_ai": true
+        "verified_by_ai": true,
+        "historical_ndwi": [
+            {"month": "Ene", "actual": 0.35, "proyectado": 0.35},
+            {"month": "Mar", "actual": 0.28, "proyectado": 0.31},
+            {"month": "May", "actual": 0.15, "proyectado": 0.29},
+            {"month": "Jul", "actual": 0.05, "proyectado": 0.28},
+            {"month": "Sep", "actual": -0.02, "proyectado": 0.27}
+        ]
     },
     {
         "id": "aqx-004",
         "name": "Citrus Valley",
         "region": "Montemorelos, Nuevo León",
-        "coordinates": {
-            "lat": 25.1872,
-            "lng": -99.8252
-        },
+        "coordinates": {"lat": 25.1872, "lng": -99.8252},
         "crop": "Naranja de Mesa",
         "risk_score": 72,
         "water_savings_m3": 22000,
         "price_per_credit": 3.10,
-        "story": "Implementación de sistemas de filtrado para reutilización de aguas grises en el riego de árboles frutales.",
+        "story": "Sistemas de filtrado para reutilización de aguas grises.",
         "status": "Available",
-        "verified_by_ai": false
+        "verified_by_ai": false,
+        "historical_ndwi": [
+            {"month": "Ene", "actual": 0.45, "proyectado": 0.45},
+            {"month": "Mar", "actual": 0.40, "proyectado": 0.42},
+            {"month": "May", "actual": 0.32, "proyectado": 0.38},
+            {"month": "Jul", "actual": 0.28, "proyectado": 0.37},
+            {"month": "Sep", "actual": 0.20, "proyectado": 0.36}
+        ]
     },
     {
         "id": "aqx-005",
         "name": "Viñedo Guadalupe",
         "region": "Ensenada, BC",
-        "coordinates": {
-            "lat": 32.0322,
-            "lng": -116.6661
-        },
+        "coordinates": {"lat": 32.0322, "lng": -116.6661},
         "crop": "Uva Cabernet",
         "risk_score": 92,
         "water_savings_m3": 12000,
         "price_per_credit": 5.50,
-        "story": "Captura de niebla y desalinización solar para riego. Alta tecnología en zona de estrés hídrico máximo.",
+        "story": "Captura de niebla y desalinización solar para riego.",
         "status": "Available",
-        "verified_by_ai": false
+        "verified_by_ai": false,
+        "historical_ndwi": [
+            {"month": "Ene", "actual": 0.30, "proyectado": 0.30},
+            {"month": "Mar", "actual": 0.22, "proyectado": 0.28},
+            {"month": "May", "actual": 0.12, "proyectado": 0.26},
+            {"month": "Jul", "actual": 0.08, "proyectado": 0.25},
+            {"month": "Sep", "actual": 0.02, "proyectado": 0.24}
+        ]
     }
 ]
