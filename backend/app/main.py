@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 import uvicorn
 import uuid
 import datetime
+import math
+import random
 
 # Esto le dice a Python: "busca el archivo .env en la misma carpeta donde estoy parado"
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -46,6 +48,32 @@ def calculate_co2(water_m3):
     # 1m3 agua ahorrada = 0.14 kg CO2e -> Convertido a Toneladas
     return round(water_m3 * 0.14 / 1000, 4)
 
+def generate_historical_data(base_value, risk_level):
+    months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+    data = []
+    
+    volatility = 0.9 if risk_level == "Alto" else 0.5
+    
+    for i in range(12):
+        progress = i / 11
+        
+        # Lógica de Riesgo (Roja): Caída y caos
+        loss_factor = 1 - (progress * 0.45)
+        noise = (math.sin(i * 3) * 0.12) * volatility
+        actual_val = round(base_value * (loss_factor + noise))
+        
+        # Lógica de Éxito (Azul): Crecimiento y estabilidad
+        growth_factor = 1 + (progress * 0.35)
+        success_noise = (math.cos(i * 2) * 0.03)
+        projected_val = round(base_value * (growth_factor + success_noise))
+        
+        data.append({
+            "name": months[i],
+            "actual": max(actual_val, 0),
+            "proyectado": projected_val
+        })
+    return data
+
 # --- ENDPOINTS ---
 
 @app.get("/")
@@ -58,14 +86,26 @@ def get_projects():
     response = supabase.table("projects").select("*").execute()
     return response.data
 
-@app.get("/api/projects/{project_id}")
-def get_project_detail(project_id: str):
-    """Detalle para el Modal"""
-    response = supabase.table("projects").select("*").eq("id", project_id).execute()
-    if not response.data:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-    return response.data[0]
+@app.get("/api/projects/{project_id}/chart")
+def get_project_chart(project_id: str):
+    """Genera la data de la gráfica para un proyecto específico"""
+    res = supabase.table("projects").select("market_cap, risk").eq("id", project_id).execute()
     
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    
+    project = res.data[0]
+    # Limpiamos el valor de market_cap si viene como string "$1.2M" -> 1200000
+    base_val = 1000000 # Valor default por si falla el parseo
+    try:
+        # Aquí podrías usar una lógica similar a tu parseValue de JS
+        base_val = float(str(project["market_cap"]).replace('$', '').replace('M', '000000').replace(',', ''))
+    except:
+        pass
+
+    chart_data = generate_historical_data(base_val, project.get("risk", "Bajo"))
+    return chart_data
+
 @app.post("/api/buy-credits")
 def buy_credits(request: BuyRequest):
     """

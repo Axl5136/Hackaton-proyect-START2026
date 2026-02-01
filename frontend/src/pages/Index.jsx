@@ -23,7 +23,6 @@ const Index = () => {
     const fetchProjects = async () => {
       try {
         setLoading(true);
-        // Traemos todo de la tabla 'projects'
         const { data, error } = await supabase
           .from('projects')
           .select('*');
@@ -35,28 +34,41 @@ const Index = () => {
           const pricePerCredit = Number(project.price_per_credit) || 0;
           const totalValue = waterVolume * pricePerCredit;
 
+          // --- MEJORA DE TU AMIGO: PREPARACIÓN DE DATOS PARA LAS CURVAS ---
+          const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+          const rawNdwi = project.historical_ndwi || [0, 0, 0, 0, 0, 0];
+
+          const chartTrends = rawNdwi.map((val, i) => ({
+            month: months[i] || `M${i + 1}`,
+            actual: val, // Curva de Riesgo (NDWI real)
+            proyectado: val * 1.15 // Curva de Impacto (Simulación de mejora)
+          }));
+
           return {
             id: project.id,
             name: project.name || "Proyecto Sin Nombre",
             industry: project.crop || "Agricultura",
 
-            // Datos para ImpactChart y CompanyTable
+            // DATOS PARA IMPACTCHART Y TABLE
             waterSaved: `${waterVolume.toLocaleString()} m³`,
             creditsSupported: `${waterVolume.toLocaleString()} m³`,
+
+            // Pasamos las tendencias preparadas para las dos curvas de la gráfica
+            historical_ndwi: chartTrends,
+
             marketCap: `$${totalValue.toLocaleString('es-MX')} MXN`,
             risk: calculateLegacyRisk(project.risk_score),
             verification: project.verified_by_ai ? "Muy alta" : "Media",
 
             projects: 1,
-            // Lógica de CO₂: 1m³ = 0.2 ton evitadas
+            // Lógica de CO₂: 1m³ = 0.14 ton evitadas
             co2Avoided: `${Math.floor(waterVolume * 0.14)} ton`,
             lastUpdate: "Hace 1 día",
             avgCost: `$${pricePerCredit} MXN/m³`,
             region: project.region,
 
-            // DATOS CRÍTICOS PARA EL MAPA Y CÁLCULOS
+            // DATOS CRÍTICOS PARA EL MAPA
             coordinates: project.coordinates,
-            historical_ndwi: project.historical_ndwi,
             price_per_credit: project.price_per_credit,
             water_savings_m3: project.water_savings_m3,
             risk_score: project.risk_score,
@@ -116,13 +128,13 @@ const Index = () => {
         {loading ? (
           <div className="flex flex-col items-center justify-center h-96 space-y-4">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-muted-foreground animate-pulse">Sincronizando con AquaNexus Satelital...</p>
+            <p className="text-muted-foreground animate-pulse">Sincronizando datos satelitales...</p>
           </div>
         ) : (
           <>
-            {/* --- DASHBOARD DE MIEDO (GRID SUPERIOR) --- */}
+            {/* --- DASHBOARD DE MIEDO: Tu Grid se mantiene intacto --- */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-auto lg:h-[550px]">
-              {/* Bloque de Gráfica de Impacto */}
+              {/* Bloque de Gráfica de Impacto (Con los datos nuevos de tu amigo) */}
               <div className="bg-card rounded-xl border border-border overflow-hidden shadow-2xl transition-all hover:border-primary/50">
                 {selectedCompany && <ImpactChart company={selectedCompany} />}
               </div>
@@ -149,6 +161,7 @@ const Index = () => {
         )}
       </main>
 
+      {/* --- CAPA DE MODALES (Con la navegación fluida de Arturo) --- */}
       {showLogin && (
         <LoginModal
           onClose={() => setShowLogin(false)}
@@ -167,7 +180,6 @@ const Index = () => {
           }}
         />
       )}
-
     </div>
   );
 };
