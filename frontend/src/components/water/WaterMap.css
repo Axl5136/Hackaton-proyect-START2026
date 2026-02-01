@@ -1,0 +1,14 @@
+
+/* src/index.css */
+@import 'mapbox-gl/dist/mapbox-gl.css';
+
+/* Aquí pegas los estilos para limpiar el fondo blanco del popup que te pasé antes */
+.mapboxgl-popup-content {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.mapboxgl-popup-tip {
+  border-bottom-color: #0f172a !important; /* Color slate-900 para la flechita */
+}
