@@ -110,3 +110,28 @@ def buy_credits(request: BuyRequest):
             "co2_offset": f"{calculate_co2(project['water_savings_m3'])} Ton CO2e"
         }
     }
+
+
+@app.get("/api/dashboard/company")
+def get_company_stats():
+    """
+    Endpoint para Arturo: Trae los datos de la empresa para el Dashboard de Miedo.
+    """
+    # En un caso real usaríamos ID de usuario, para la demo traemos al primero (Tesla)
+    response = supabase.table("companies").select("*").limit(1).execute()
+    
+    if not response.data:
+        return {"error": "No hay empresa configurada"}
+    
+    company = response.data[0]
+    
+    # Calculamos porcentaje para la gráfica de progreso
+    progress = round((company['co2_achieved_tons'] / company['co2_target_tons']) * 100, 1)
+    
+    return {
+        "company_name": company['name'],
+        "risk_level": company['water_risk_level'], # Aquí sale "CRITICO"
+        "sustainability_goal": f"{progress}% Cumplido",
+        "budget_remaining": f"${company['total_budget']:,}",
+        "raw_data": company
+    }
