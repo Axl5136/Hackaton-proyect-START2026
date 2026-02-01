@@ -6,8 +6,6 @@ import { KPICards } from "@/components/dashboard/KPICards";
 import { WaterSavingsChart } from "@/components/dashboard/WaterSavingsChart";
 import { CertificatesTable } from "@/components/dashboard/CertificatesTable";
 import { supabase } from "../supabase";
-
-// ✅ IMPORTAMOS TU MAPA REAL Y QUITAMOS EL PLACEHOLDER
 import WaterMap from "@/components/water/WaterMap";
 
 export default function Dashboard() {
@@ -15,9 +13,10 @@ export default function Dashboard() {
   const [companyName, setCompanyName] = useState("Cargando...");
   const [user, setUser] = useState(null);
 
-  // Estado para los datos y selección
+  // Estados para datos
   const [projects, setProjects] = useState([]);
-  const [selectedProject, setSelectedProject] = useState(null); // Para sincronía con el mapa
+  const [chartHistory, setChartHistory] = useState([]); // ✅ Estado para la gráfica real
+  const [selectedProject, setSelectedProject] = useState(null);
   const [kpiStats, setKpiStats] = useState({
     totalWater: 0,
     totalInvestment: 0,
@@ -38,30 +37,47 @@ export default function Dashboard() {
           setCompanyName("Panel Corporativo");
         }
 
-        const { data: projectsData, error } = await supabase
+        // 1. CARGAMOS PROYECTOS (Para el Mapa)
+        const { data: projectsData, error: pError } = await supabase
           .from('projects')
           .select('*');
 
-        if (error) throw error;
+        if (pError) throw pError;
 
+        // 2. CARGAMOS TRANSACCIONES (Para la Gráfica Acumulada)
+        const { data: transData, error: tError } = await supabase
+          .from('transactions')
+          .select('amount_paid, timestamp')
+          .order('timestamp', { ascending: true });
+
+        if (tError) throw tError;
+
+        // --- PROCESAMIENTO DE TRANSACCIONES PARA LA GRÁFICA ---
+        let totalAcumulado = 0;
+        const processedHistory = (transData || []).map(t => {
+          totalAcumulado += t.amount_paid;
+          return {
+            // "month" es lo que suele pedir Recharts para el eje X
+            month: new Date(t.timestamp).toLocaleDateString('es-MX', { month: 'short' }),
+            total: totalAcumulado
+          };
+        });
+        setChartHistory(processedHistory);
+
+        // --- PROCESAMIENTO DE PROYECTOS PARA EL MAPA ---
         if (projectsData) {
-          // Formateamos para que el WaterMap reconozca las coordenadas y datos
           const formattedProjects = projectsData.map(p => ({
             ...p,
             waterSaved: `${(p.water_savings_m3 || 0).toLocaleString()} m³`,
             co2Avoided: `${Math.floor((p.water_savings_m3 || 0) * 0.14)} ton`
           }));
 
+          // KPIs basados en la realidad de la tabla de proyectos
           const waterSum = projectsData.reduce((acc, curr) => acc + (Number(curr.water_savings_m3) || 0), 0);
-          const totalValue = projectsData.reduce((acc, curr) => {
-            const savings = Number(curr.water_savings_m3) || 0;
-            const price = Number(curr.price_per_credit) || 0;
-            return acc + (savings * price);
-          }, 0);
-
+          
           setKpiStats({
             totalWater: waterSum,
-            totalInvestment: totalValue,
+            totalInvestment: totalAcumulado, // Usamos el total de las transacciones reales
             activeProjects: projectsData.length
           });
 
@@ -99,7 +115,6 @@ export default function Dashboard() {
                     <KPICards stats={kpiStats} />
                   </section>
 
-                  {/* ✅ AQUÍ CAMBIAMOS EL PLACEHOLDER POR TU WATERMAP */}
                   <section aria-label="Mapa de riesgo hídrico" className="h-[400px] bg-card rounded-xl border border-border overflow-hidden shadow-lg relative">
                     <WaterMap
                       projects={projects}
@@ -108,8 +123,9 @@ export default function Dashboard() {
                     />
                   </section>
 
+                  {/* ✅ PASAMOS chartHistory EN LUGAR DE projects */}
                   <section aria-label="Evolución del agua ahorrada">
-                    <WaterSavingsChart data={projects} />
+                    <WaterSavingsChart data={chartHistory} />
                   </section>
 
                   <section aria-label="Certificados">
