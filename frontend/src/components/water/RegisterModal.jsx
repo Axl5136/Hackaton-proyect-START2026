@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 // Asegúrate de importar tu cliente supabase correctamente
 import { supabase } from "../../supabase";
 
-export function RegisterModal({ onClose }) {
+export function RegisterModal({ onClose, onSwitchToLogin }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -171,6 +171,19 @@ export function RegisterModal({ onClose }) {
           <p className="text-xs text-center text-muted-foreground">
             Al registrarte, aceptas nuestros términos de servicio.
           </p>
+
+          {onSwitchToLogin && (
+            <div className="text-center mt-4">
+              <span className="text-sm text-muted-foreground">¿Ya tienes cuenta? </span>
+              <button
+                type="button"
+                className="text-sm text-primary hover:underline font-semibold"
+                onClick={onSwitchToLogin}
+              >
+                Inicia sesión
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>
