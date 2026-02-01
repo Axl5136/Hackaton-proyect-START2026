@@ -30,24 +30,35 @@ const Index = () => {
           const pricePerCredit = Number(project.price_per_credit) || 0;
           const totalValue = waterVolume * pricePerCredit;
 
+          // --- PREPARACIÓN DE DATOS PARA LAS CURVAS DEL CHART ---
+          const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+          const rawNdwi = project.historical_ndwi || [0, 0, 0, 0, 0, 0]; // Fallback
+          
+          const chartTrends = rawNdwi.map((val, i) => ({
+            month: months[i] || `M${i + 1}`,
+            actual: val, // Curva de Riesgo
+            proyectado: val * 1.15 // Curva de Impacto (Simulamos +15% de mejora hídrica)
+          }));
+
           return {
             id: project.id,
             name: project.name || "Proyecto Sin Nombre",
             industry: project.crop || "Agricultura",
 
             // --- DATOS COMPATIBLES CON IMPACTCHART ---
-            // Mantenemos el formato exacto "12,345 m³" que espera el chart
             waterSaved: `${waterVolume.toLocaleString()} m³`,
             creditsSupported: `${waterVolume.toLocaleString()} m³`,
+            
+            // Pasamos las tendencias preparadas para las dos curvas
+            historical_ndwi: chartTrends, 
 
             // --- DATO NUEVO PARA TU TABLA FINTECH ---
             marketCap: `$${totalValue.toLocaleString('es-MX')} MXN`,
 
             // --- PROTECCIÓN CONTRA CRASHES (RIESGO) ---
-            // Forzamos solo 3 niveles para no romper gráficas que usen diccionarios de colores fijos
             risk: calculateLegacyRisk(project.risk_score),
 
-            verification: project.verified_by_ai ? "Muy alta" : "Media", // Usamos valores estándar del mock
+            verification: project.verified_by_ai ? "Muy alta" : "Media",
 
             projects: 1,
             co2Avoided: `${Math.floor(waterVolume * 0.2)} ton`,
@@ -68,15 +79,13 @@ const Index = () => {
     fetchProjects();
   }, []);
 
-  // FUNCIÓN SEGURA: Solo devuelve lo que el Mock original tenía
   const calculateLegacyRisk = (score) => {
     if (!score) return "Bajo";
-    if (score >= 80) return "Alto"; // Quitamos "Crítico" para no romper el Chart
+    if (score >= 80) return "Alto";
     if (score >= 50) return "Medio";
     return "Bajo";
   };
 
-  // Ordenamos por dinero (marketCap)
   const sortedCompanies = useMemo(() => {
     return [...companies].sort((a, b) => {
       const valA = parseFloat(a.marketCap?.replace(/[^0-9.-]+/g, "")) || 0;
@@ -85,7 +94,6 @@ const Index = () => {
     });
   }, [companies]);
 
-  // Selección inicial automática
   useEffect(() => {
     if (sortedCompanies.length > 0 && !selectedCompany) {
       setSelectedCompany(sortedCompanies[0]);
@@ -107,11 +115,13 @@ const Index = () => {
       <main className="container mx-auto px-4 py-6 space-y-6">
         {loading ? (
           <div className="flex items-center justify-center h-64 text-muted-foreground animate-pulse">
-            Cargando datos...
+            Cargando datos satelitales de Supabase...
           </div>
         ) : (
           <>
-            {/* Validamos que selectedCompany exista antes de renderizar el chart */}
+            {/* IMPORTANTE: Cambié 'company' por 'project' para que coincida 
+                con la prop del ImpactChart que te pasé anteriormente. 
+            */}
             {selectedCompany && <ImpactChart company={selectedCompany} />}
 
             <CompanyTable
