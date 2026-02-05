@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Map, { Marker, Popup, NavigationControl } from 'react-map-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';  
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 import './WaterMap.css';
 
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiYXJ0dXJvLXVsaXNlczUxMzYiLCJhIjoiY21sMzN4NjR6MHEyNTNtcHl4NW1kbm8yaiJ9.XmuQzLJzWpfGgNJEe-zEJQ';
 
-const WaterMap = ({ projects = [], onProjectSelect, selectedId }) => {
+// Usamos tu token real de Mapbox
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+const WaterMap = ({ projects, onProjectSelect, selectedId }) => {
     const mapRef = useRef();
     const [popupInfo, setPopupInfo] = useState(null);
     const [viewState, setViewState] = useState({
@@ -95,7 +96,7 @@ const WaterMap = ({ projects = [], onProjectSelect, selectedId }) => {
                     >
                         {/* CONTENEDOR PRINCIPAL: Color acorde a tu Dashboard (Slate 950 / Cyan) */}
                         <div className="p-0 bg-[#0B1120]/95 backdrop-blur-md text-white rounded-xl shadow-[0_0_20px_rgba(0,0,0,0.5)] min-w-[310px] border border-cyan-500/30 overflow-hidden font-sans ring-1 ring-white/10">
-                            
+
                             {/* 1. HEADER: Con acento Cian Neón */}
                             <div className="bg-gradient-to-r from-[#0B1120] via-[#111827] to-[#0B1120] px-4 py-3 flex justify-between items-center border-b border-cyan-500/20">
                                 <div>
@@ -105,7 +106,7 @@ const WaterMap = ({ projects = [], onProjectSelect, selectedId }) => {
                                         <p className="text-[9px] text-slate-400 font-bold tracking-widest uppercase">Sistema Monitoreado</p>
                                     </div>
                                 </div>
-                                <button 
+                                <button
                                     onClick={() => setPopupInfo(null)}
                                     className="text-slate-500 hover:text-cyan-400 transition-colors p-1"
                                 >
